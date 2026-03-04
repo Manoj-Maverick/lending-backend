@@ -36,13 +36,15 @@ export async function updateSettings(req, res) {
     for (const item of updates) {
       await pool.query(
         `
-        UPDATE settings
-        SET setting_value = $1,
-            updated_by = $2,
-            updated_at = CURRENT_TIMESTAMP
-        WHERE setting_key = $3
+        INSERT INTO settings (setting_key, setting_value, updated_by, updated_at)
+        VALUES ($1, $2::jsonb, $3, CURRENT_TIMESTAMP)
+        ON CONFLICT (setting_key)
+        DO UPDATE SET
+          setting_value = EXCLUDED.setting_value,
+          updated_by = EXCLUDED.updated_by,
+          updated_at = CURRENT_TIMESTAMP
         `,
-        [item.value, userId, item.key],
+        [item.key, JSON.stringify(item.value ?? {}), userId],
       );
     }
 

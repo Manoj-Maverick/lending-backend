@@ -31,6 +31,7 @@ import { upload } from "./Routes/multer.js";
 import { createCustomer } from "./services/clients.management.page/createClient.js";
 import { createLoan } from "./services/clients.profile.page/createNewLoan.js";
 import { recordPayment } from "./services/loans.details.page/recordPayment.js";
+import { getTodayCollections } from "./services/todayCollections.page/getTodayCollections.js";
 import path from "path";
 import cookieParser from "cookie-parser";
 const app = express();
@@ -134,6 +135,10 @@ app.get("/api/loans-management/stats", getLoansManagementStats);
 app.get("/api/loans/:loanId/details", getLoanProfileInfo);
 app.get("/api/loans/:loanId/schedule", getLoanSchedule);
 app.put("/api/update-branch/:id", updateBranch);
+
+// today collections page routes
+app.get("/api/today-collections", getTodayCollections);
+
 // staffs management page routes
 app.get("/api/staffs-management/staffs-list", getStaffsList);
 // settings page routes

@@ -18,6 +18,7 @@ export function requireAuth(req, res, next) {
 
 export function requireRole(allowedRoles = []) {
   return (req, res, next) => {
+    console.log("Authorization check for user:", req.user);
     if (!req.user || !req.user.role) {
       return res.status(401).json({ error: "Unauthorized" });
     }
