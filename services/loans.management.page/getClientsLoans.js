@@ -85,10 +85,12 @@ export async function getClientsLoansList(req, res) {
       l.principal_amount AS loan_amount,
       l.installment_amount AS emi_amount,
       l.interest_amount,
+      l.interest_rate,
       l.tenure_value,
       l.tenure_unit,
       l.repayment_type,
       l.status,
+      
 
       /* Outstanding = sum of unpaid schedules (+ fine) */
       COALESCE((

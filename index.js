@@ -9,7 +9,7 @@ import {
   loadSettings,
   updateSettings,
 } from "./Routes/settings.js";
-import { getBranches } from "./services/branch.service.js";
+import { getBranches } from "./services/branches.management.page/getBranchesList.js";
 import { getBranchById } from "./services/branch.details.page/getBranchByID.js";
 import { getBranchPerformance } from "./services/branch.details.page/getBranchPerformance.js";
 import { getBranchStaff } from "./services/branch.details.page/getBranchStaff.js";
@@ -25,6 +25,13 @@ import { getDashboardKpis } from "./services/dashboard.page/getDashboardKpis.js"
 import { getLoanProfileInfo } from "./services/loans.details.page/getLoanProfileInfo.js";
 import { getLoanSchedule } from "./services/loans.details.page/getLoanSchedule.js";
 import { getStaffsList } from "./services/staffs-management.page/getStaffsList.js";
+import { createBranch } from "./services/branches.management.page/createBranch.js";
+import { updateBranch } from "./services/branch.details.page/updateBranch.js";
+import { upload } from "./Routes/multer.js";
+import { createCustomer } from "./services/clients.management.page/createClient.js";
+import { createLoan } from "./services/clients.profile.page/createNewLoan.js";
+import { recordPayment } from "./services/loans.details.page/recordPayment.js";
+import path from "path";
 import cookieParser from "cookie-parser";
 const app = express();
 
@@ -36,6 +43,7 @@ app.use(
     credentials: true,
   }),
 );
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 app.use(express.json());
 
 // Auth routes
@@ -47,7 +55,7 @@ app.get("/api/auth/me", getMe);
 app.post("/api/users/create", requireAuth, requireRole(["ADMIN"]), addUser);
 app.get("/api/users", getUsers);
 
-app.get("/test-db", requireAuth, requireRole(["ADMIN"]), async (req, res) => {
+app.get("/test-db", async (req, res) => {
   try {
     const result = await pool.query("SELECT NOW()");
     res.json({
@@ -85,7 +93,7 @@ app.get("/api/dashboard/summary", getDashboardKpis);
 
 // branch management page routes
 app.get("/api/branch-management/list", getBranches);
-
+app.post("/api/create-new-branch", createBranch);
 // branch deatils page routes
 app.get("/api/branch-details/:branchId", getBranchById);
 app.get(
@@ -101,12 +109,23 @@ app.get("/api/branch-details/customers/:branchId", getBranchCustomers);
 
 // client management page routes
 app.get("/api/clients-management/clients-list", getClientsList);
+app.post(
+  "/api/clients/create",
+  upload.fields([
+    { name: "photo", maxCount: 1 },
+    { name: "idProof", maxCount: 1 },
+    { name: "addressProof", maxCount: 1 },
+    { name: "incomeProof", maxCount: 1 },
+  ]),
+  createCustomer,
+);
 
 // client profile page routes
 app.get("/api/client-profile/:id/profile", getCustomerProfile);
 app.get("/api/client-profile/:customerId/guarantors", getCustomerGuarantors);
 app.get("/api/client-profile/:customerId/loans", getCustomerLoans);
-
+app.post("/api/loans/create", upload.none(), createLoan);
+app.post("/api/loans/record-payment", recordPayment);
 // loan management page routes
 app.get("/api/loans-management/loans-list", getClientsLoansList);
 app.get("/api/loans-management/stats", getLoansManagementStats);
@@ -114,7 +133,7 @@ app.get("/api/loans-management/stats", getLoansManagementStats);
 // loan details page routes
 app.get("/api/loans/:loanId/details", getLoanProfileInfo);
 app.get("/api/loans/:loanId/schedule", getLoanSchedule);
-
+app.put("/api/update-branch/:id", updateBranch);
 // staffs management page routes
 app.get("/api/staffs-management/staffs-list", getStaffsList);
 // settings page routes

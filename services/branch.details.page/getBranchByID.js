@@ -25,6 +25,8 @@ export async function getBranchById(req, res) {
     b.address,
     b.location,
     b.branch_type,
+    b.state,
+    b.email,
     b.branch_mobile,
     b.is_active,
 
