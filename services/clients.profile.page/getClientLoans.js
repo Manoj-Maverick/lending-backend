@@ -19,7 +19,7 @@ import db from "../../db.js"; // your pg pool / client
  * }
  */
 export async function getCustomerLoans(req, res) {
-  const { customerId } = req.params;
+  const customerId = req.params.borrowerId || req.params.customerId;
 
   // Validate input
   if (!customerId || isNaN(customerId)) {

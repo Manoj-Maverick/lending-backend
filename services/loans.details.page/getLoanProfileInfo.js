@@ -36,6 +36,7 @@ export async function getLoanProfileInfo(req, res) {
       COALESCE(l.total_payable - COALESCE(SUM(p.paid_amount), 0), l.total_payable) AS remaining_balance,
 
       -- Client
+      c.id AS client_id,
       c.full_name AS client_name,
       c.customer_code,
       c.phone,
@@ -53,7 +54,7 @@ export async function getLoanProfileInfo(req, res) {
 
     WHERE l.id = $1
     GROUP BY
-      l.id, b.branch_name, c.full_name, c.customer_code, c.phone, c.email, u.full_name
+      l.id, b.branch_name, c.full_name, c.customer_code, c.phone, c.email, u.full_name,c.id
   `;
 
   try {

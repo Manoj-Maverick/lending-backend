@@ -17,70 +17,76 @@ export async function getDashboardKpis(req, res) {
   }
 
   const query = `
-    SELECT
-      /* total_branches (only when branch = all) */
-      CASE
-        WHEN $1::INTEGER IS NULL THEN (
-          SELECT COUNT(*)
-          FROM branches
-          WHERE is_active = TRUE
-        )
-        ELSE NULL
-      END AS total_branches,
+   WITH filtered_loans AS (
+  SELECT *
+  FROM loans
+  WHERE ($1::INTEGER IS NULL OR branch_id = $1)
+),
+filtered_customers AS (
+  SELECT *
+  FROM customers
+  WHERE is_active = TRUE
+    AND ($1::INTEGER IS NULL OR branch_id = $1)
+),
+filtered_schedule AS (
+  SELECT ls.*
+  FROM loan_schedule ls
+  JOIN filtered_loans fl ON fl.id = ls.loan_id
+),
+filtered_payments AS (
+  SELECT p.*
+  FROM payments p
+  JOIN filtered_loans fl ON fl.id = p.loan_id
+)
 
-      /* total_clients */
-      (
-        SELECT COUNT(*)
-        FROM customers c
-        WHERE c.is_active = TRUE
-          AND ($1::INTEGER IS NULL OR c.branch_id = $1::INTEGER)
-      ) AS total_clients,
+SELECT
+  /* total_branches */
+  CASE
+    WHEN $1::INTEGER IS NULL THEN (
+      SELECT COUNT(*) FROM branches WHERE is_active = TRUE
+    )
+    ELSE NULL
+  END AS total_branches,
 
-      /* active_loans */
-      (
-        SELECT COUNT(*)
-        FROM loans l
-        WHERE l.status = 'ACTIVE'
-          AND ($1::INTEGER IS NULL OR l.branch_id = $1::INTEGER)
-      ) AS active_loans,
+  /* total_clients */
+  (SELECT COUNT(*) FROM filtered_customers) AS total_clients,
 
-      /* outstanding_amount = sum of unpaid schedules (+ fine) */
-      COALESCE((
-        SELECT SUM(ls.due_amount + ls.fine_amount)
-        FROM loan_schedule ls
-        JOIN loans l2 ON l2.id = ls.loan_id
-        WHERE ls.status IN ('PENDING', 'DELAYED')
-          AND ($1::INTEGER IS NULL OR l2.branch_id = $1::INTEGER)
-      ), 0) AS outstanding_amount,
+  /* active_loans */
+  (
+    SELECT COUNT(*)
+    FROM filtered_loans
+    WHERE status = 'ACTIVE'
+  ) AS active_loans,
 
-      /* today_due = today's unpaid schedules */
-      COALESCE((
-        SELECT SUM(ls2.due_amount + ls2.fine_amount)
-        FROM loan_schedule ls2
-        JOIN loans l3 ON l3.id = ls2.loan_id
-        WHERE ls2.due_date = CURRENT_DATE
-          AND ls2.status IN ('PENDING', 'DELAYED')
-          AND ($1::INTEGER IS NULL OR l3.branch_id = $1::INTEGER)
-      ), 0) AS today_due,
+  /* outstanding_amount */
+  COALESCE((
+    SELECT SUM(due_amount + fine_amount)
+    FROM filtered_schedule
+    WHERE status IN ('PENDING','DELAYED')
+  ),0) AS outstanding_amount,
 
-      /* today_collected = payments made today */
-      COALESCE((
-        SELECT SUM(p.paid_amount + p.fine_paid)
-        FROM payments p
-        JOIN loans l4 ON l4.id = p.loan_id
-        WHERE p.paid_date = CURRENT_DATE
-          AND ($1::INTEGER IS NULL OR l4.branch_id = $1::INTEGER)
-      ), 0) AS today_collected,
+  /* today_due */
+  COALESCE((
+    SELECT SUM(due_amount + fine_amount)
+    FROM filtered_schedule
+    WHERE due_date = CURRENT_DATE
+      AND status IN ('PENDING','DELAYED')
+  ),0) AS today_due,
 
-      /* weekly_collection = expected collection in next 7 days */
-      COALESCE((
-        SELECT SUM(ls3.due_amount + ls3.fine_amount)
-        FROM loan_schedule ls3
-        JOIN loans l5 ON l5.id = ls3.loan_id
-        WHERE ls3.due_date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '6 days'
-          AND ls3.status IN ('PENDING', 'DELAYED')
-          AND ($1::INTEGER IS NULL OR l5.branch_id = $1::INTEGER)
-      ), 0) AS weekly_collection
+  /* today_collected */
+  COALESCE((
+    SELECT SUM(paid_amount + fine_paid)
+    FROM filtered_payments
+    WHERE paid_date = CURRENT_DATE
+  ),0) AS today_collected,
+
+  /* weekly_collection */
+  COALESCE((
+    SELECT SUM(due_amount + fine_amount)
+    FROM filtered_schedule
+    WHERE due_date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '6 days'
+      AND status IN ('PENDING','DELAYED')
+  ),0) AS weekly_collection;
   `;
 
   try {

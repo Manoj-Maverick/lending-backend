@@ -1,0 +1,236 @@
+import db from "../../db.js";
+
+import { sendEmail } from "../services/mail.service.js";
+import { formatCollectionEmail } from "../reports/formatters/email.formatter.js";
+import { TODAY_COLLECTION_QUERY } from "../reports/queries/collection.query.js";
+import { OVERDUE_COLLECTION_QUERY } from "../reports/queries/overdue.query.js";
+
+/* =======================================================
+   TODAY COLLECTION EMAIL
+======================================================= */
+
+export async function sendTodayCollectionEmail() {
+  try {
+    const { rows } = await db.query(TODAY_COLLECTION_QUERY);
+
+    const today = new Date();
+    const dateStr = today.toLocaleDateString();
+    const dayStr = today.toLocaleDateString("en-IN", { weekday: "long" });
+
+    let html = buildHeader(
+      "📊 Today's Collection List",
+      "#1f4e79",
+      "#2c7be5",
+      dateStr,
+      dayStr,
+    );
+
+    if (!rows.length) {
+      html += messageCard(
+        "✅ Great news! No collections scheduled for today.",
+        "#e8f5e9",
+        "#2e7d32",
+      );
+
+      html += footer();
+
+      await sendEmail({
+        subject: "Daily Collection Report",
+        html,
+      });
+
+      return;
+    }
+
+    const branchMap = groupByBranch(rows);
+
+    for (const branch of Object.values(branchMap)) {
+      html += branchHeader(branch.name, "#1f4e79");
+
+      html += formatCollectionEmail(branch.data);
+    }
+
+    html += footer();
+
+    await sendEmail({
+      subject: "Daily Collection Report",
+      html,
+    });
+
+    console.log("Daily collection email sent");
+  } catch (err) {
+    console.error("Daily collection email failed:", err);
+  }
+}
+
+/* =======================================================
+   OVERDUE COLLECTION EMAIL
+======================================================= */
+
+export async function sendOverdueCollectionEmail() {
+  try {
+    const { rows } = await db.query(OVERDUE_COLLECTION_QUERY);
+
+    const today = new Date();
+    const dateStr = today.toLocaleDateString();
+    const dayStr = today.toLocaleDateString("en-IN", { weekday: "long" });
+
+    let html = buildHeader(
+      "🚨 Overdue Collection Report",
+      "#b02a37",
+      "#ff6b6b",
+      dateStr,
+      dayStr,
+    );
+
+    if (!rows.length) {
+      html += messageCard(
+        "🎉 Excellent! There are no overdue collections today.",
+        "#e8f5e9",
+        "#2e7d32",
+      );
+
+      html += footer();
+
+      await sendEmail({
+        subject: "Overdue Collection Report",
+        html,
+      });
+
+      return;
+    }
+
+    const branchMap = groupByBranch(rows);
+
+    for (const branch of Object.values(branchMap)) {
+      html += branchHeader(branch.name, "#b02a37");
+
+      html += formatCollectionEmail(branch.data);
+    }
+
+    html += footer();
+
+    await sendEmail({
+      subject: "Overdue Collection Report",
+      html,
+    });
+
+    console.log("Overdue collection email sent");
+  } catch (err) {
+    console.error("Overdue collection email failed:", err);
+  }
+}
+
+/* =======================================================
+   HELPERS
+======================================================= */
+
+function groupByBranch(rows) {
+  const branchMap = {};
+
+  rows.forEach((row) => {
+    if (!branchMap[row.branch_id]) {
+      branchMap[row.branch_id] = {
+        name: row.branch_name,
+        data: [],
+      };
+    }
+
+    branchMap[row.branch_id].data.push(row);
+  });
+
+  return branchMap;
+}
+
+function buildHeader(title, color1, color2, dateStr, dayStr) {
+  return `
+  <div style="
+      max-width:900px;
+      margin:auto;
+      background:#ffffff;
+      font-family:Arial,Helvetica,sans-serif">
+
+    <div style="
+        background:linear-gradient(90deg,${color1},${color2});
+        color:white;
+        padding:20px;
+        border-radius:8px 8px 0 0">
+
+        <h1 style="margin:0;font-size:22px">${title}</h1>
+
+        <p style="margin:5px 0 0 0;font-size:14px">
+          Automated Lending System
+        </p>
+
+    </div>
+
+    <div style="padding:20px">
+
+      <p><b>Date:</b> ${dateStr}</p>
+      <p><b>Day:</b> ${dayStr}</p>
+
+      <hr/>
+
+  `;
+}
+
+function branchHeader(name, color) {
+  return `
+    <div style="
+        margin-top:25px;
+        background:#f5f7fa;
+        padding:12px;
+        border-radius:6px">
+
+        <h2 style="
+            margin:0;
+            color:${color};
+            font-size:18px">
+
+            🏦 Branch: ${name}
+
+        </h2>
+
+    </div>
+  `;
+}
+
+function messageCard(text, bg, color) {
+  return `
+    <div style="
+        padding:20px;
+        background:${bg};
+        border-radius:6px;
+        color:${color};
+        font-weight:bold">
+
+        ${text}
+
+    </div>
+  `;
+}
+
+function footer() {
+  return `
+    <div style="
+        margin-top:30px;
+        padding:15px;
+        background:#f5f7fa;
+        text-align:center;
+        font-size:12px;
+        color:#777">
+
+        This is an automated report generated by the lending system.
+
+    </div>
+
+  </div>
+  `;
+}
+
+/* =======================================================
+   RUN EMAILS (optional manual trigger)
+======================================================= */
+
+sendTodayCollectionEmail();
+sendOverdueCollectionEmail();

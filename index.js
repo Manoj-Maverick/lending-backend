@@ -8,18 +8,18 @@ import {
   getUsers,
   loadSettings,
   updateSettings,
-} from "./Routes/settings.js";
+} from "./services/settings.page/settings.js";
 import { getBranches } from "./services/branches.management.page/getBranchesList.js";
 import { getBranchById } from "./services/branch.details.page/getBranchByID.js";
 import { getBranchPerformance } from "./services/branch.details.page/getBranchPerformance.js";
 import { getBranchStaff } from "./services/branch.details.page/getBranchStaff.js";
 import { getWeeklyLoanSummaryByBranch } from "./services/branch.details.page/getWeeklyLoanSummaryByBranch.js";
 import { getBranchCustomers } from "./services/branch.details.page/getBranchCustomers.js";
-import { getClientsList } from "./services/clients.management.page/getClientsList.js";
-import { getCustomerProfile } from "./services/clients.profile.page/getClientsProfileInfo.js";
-import { getCustomerGuarantors } from "./services/clients.profile.page/getClientGuarantorsInfo.js";
-import { getCustomerLoans } from "./services/clients.profile.page/getClientLoans.js";
-import { getClientsLoansList } from "./services/loans.management.page/getClientsLoans.js";
+import { getClientsList as getBorrowersList } from "./services/clients.management.page/getClientsList.js";
+import { getCustomerProfile as getBorrowerProfile } from "./services/clients.profile.page/getClientsProfileInfo.js";
+import { getCustomerGuarantors as getBorrowerGuarantors } from "./services/clients.profile.page/getClientGuarantorsInfo.js";
+import { getCustomerLoans as getBorrowerLoans } from "./services/clients.profile.page/getClientLoans.js";
+import { getClientsLoansList as getBorrowerLoansList } from "./services/loans.management.page/getClientsLoans.js";
 import { getLoansManagementStats } from "./services/loans.management.page/getClientsLoansStatsByBranch.js";
 import { getDashboardKpis } from "./services/dashboard.page/getDashboardKpis.js";
 import { getLoanProfileInfo } from "./services/loans.details.page/getLoanProfileInfo.js";
@@ -28,10 +28,17 @@ import { getStaffsList } from "./services/staffs-management.page/getStaffsList.j
 import { createBranch } from "./services/branches.management.page/createBranch.js";
 import { updateBranch } from "./services/branch.details.page/updateBranch.js";
 import { upload } from "./Routes/multer.js";
-import { createCustomer } from "./services/clients.management.page/createClient.js";
+import { createCustomer as createBorrower } from "./services/clients.management.page/createClient.js";
 import { createLoan } from "./services/clients.profile.page/createNewLoan.js";
 import { recordPayment } from "./services/loans.details.page/recordPayment.js";
 import { getTodayCollections } from "./services/todayCollections.page/getTodayCollections.js";
+import { getWeeklyCollection } from "./services/dashboard.page/getDailyCollectionSummary.js";
+import { getTodayPayments } from "./services/dashboard.page/getTodayPaymentsDueTableData.js";
+import { getBranchComparison } from "./services/dashboard.page/getBranchComparison.js";
+import { getBranchTodayPayments } from "./services/loans.details.page/getBranchTodayPayments.js";
+import { forecloseLoan } from "./services/loans.details.page/foreCloseLoan.js";
+import { sendOtp, verifyOtp } from "./services/others.services/otp.service.js";
+import { generateNewBranchCode } from "./services/generators.services/newBranchCode.js";
 import path from "path";
 import cookieParser from "cookie-parser";
 const app = express();
@@ -91,12 +98,20 @@ app.get("/api/branches", async (req, res) => {
 
 // dashboard summary route (KPIs)
 app.get("/api/dashboard/summary", getDashboardKpis);
+app.get("/api/dashboard/daily-collection-summary", getWeeklyCollection);
+4;
+app.get("/api/dashboard/today-payments", getTodayPayments);
+app.get("/api/dashboard/branch-comparison", getBranchComparison);
 
 // branch management page routes
 app.get("/api/branch-management/list", getBranches);
 app.post("/api/create-new-branch", createBranch);
 // branch deatils page routes
 app.get("/api/branch-details/:branchId", getBranchById);
+app.get(
+  "/api/branch-deatils/get-branch-today-payments",
+  getBranchTodayPayments,
+);
 app.get(
   "/api/branch-details/performance-metrics/:branchId",
   getBranchPerformance,
@@ -106,35 +121,35 @@ app.get(
   "/api/branch-details/weekly-loan-summary/:branchId",
   getWeeklyLoanSummaryByBranch,
 );
-app.get("/api/branch-details/customers/:branchId", getBranchCustomers);
-
-// client management page routes
-app.get("/api/clients-management/clients-list", getClientsList);
+app.get("/api/branch-details/borrowers/:branchId", getBranchCustomers);
+// borrower management page routes
+app.get("/api/borrowers-management/borrowers-list", getBorrowersList);
 app.post(
-  "/api/clients/create",
+  "/api/borrowers/create",
   upload.fields([
     { name: "photo", maxCount: 1 },
     { name: "idProof", maxCount: 1 },
     { name: "addressProof", maxCount: 1 },
     { name: "incomeProof", maxCount: 1 },
   ]),
-  createCustomer,
+  createBorrower,
 );
 
-// client profile page routes
-app.get("/api/client-profile/:id/profile", getCustomerProfile);
-app.get("/api/client-profile/:customerId/guarantors", getCustomerGuarantors);
-app.get("/api/client-profile/:customerId/loans", getCustomerLoans);
+// borrower profile page routes
+app.get("/api/borrower-profile/:borrowerId/profile", getBorrowerProfile);
+app.get("/api/borrower-profile/:borrowerId/guarantors", getBorrowerGuarantors);
+app.get("/api/borrower-profile/:borrowerId/loans", getBorrowerLoans);
 app.post("/api/loans/create", upload.none(), createLoan);
 app.post("/api/loans/record-payment", recordPayment);
 // loan management page routes
-app.get("/api/loans-management/loans-list", getClientsLoansList);
+app.get("/api/loans-management/loans-list", getBorrowerLoansList);
 app.get("/api/loans-management/stats", getLoansManagementStats);
 
 // loan details page routes
 app.get("/api/loans/:loanId/details", getLoanProfileInfo);
 app.get("/api/loans/:loanId/schedule", getLoanSchedule);
 app.put("/api/update-branch/:id", updateBranch);
+app.post("/api/loans/:loanId/fore-close-loan", forecloseLoan);
 
 // today collections page routes
 app.get("/api/today-collections", getTodayCollections);
@@ -144,6 +159,13 @@ app.get("/api/staffs-management/staffs-list", getStaffsList);
 // settings page routes
 app.get("/api/settings", loadSettings);
 app.post("/api/settings", requireAuth, requireRole(["ADMIN"]), updateSettings);
+
+// opt routes
+app.post("/api/generateOTP", sendOtp);
+app.post("/api/verifyOTP", verifyOtp);
+
+//generators routes
+app.post("/api/generate-next-branch-code", generateNewBranchCode);
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, "0.0.0.0", () => {

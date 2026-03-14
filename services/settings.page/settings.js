@@ -1,5 +1,5 @@
 import bcrypt from "bcrypt";
-import pool from "../db.js";
+import pool from "../../db.js";
 
 // Settings Functions
 export async function loadSettings(req, res) {

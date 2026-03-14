@@ -2,12 +2,6 @@ import db from "../../db.js";
 
 /**
  * GET /api/loans
- * Query params:
- *  - status
- *  - branch
- *  - search
- *  - page (default 1)
- *  - pageSize (default 20)
  */
 export async function getClientsLoansList(req, res) {
   const {
@@ -16,7 +10,9 @@ export async function getClientsLoansList(req, res) {
     search = "",
     page = "1",
     pageSize = "20",
+    collectionDay = "all",
   } = req.query;
+  console.log(req.query);
 
   const pageNum = Math.max(1, Number(page) || 1);
   const limitNum = Math.min(100, Math.max(1, Number(pageSize) || 20));
@@ -41,8 +37,15 @@ export async function getClientsLoansList(req, res) {
         message: "Invalid branch parameter",
       });
     }
+
     params.push(branchId);
     whereClauses.push(`l.branch_id = $${idx++}`);
+  }
+
+  // Collection weekday filter
+  if (collectionDay !== "all") {
+    params.push(collectionDay.toUpperCase());
+    whereClauses.push(`l.collection_weekday = $${idx++}`);
   }
 
   // Search filter
@@ -61,9 +64,6 @@ export async function getClientsLoansList(req, res) {
   const whereSQL =
     whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
 
-  // --------
-  // Count query
-  // --------
   const countQuery = `
     SELECT COUNT(DISTINCT l.id) AS total
     FROM loans l
@@ -71,9 +71,6 @@ export async function getClientsLoansList(req, res) {
     ${whereSQL};
   `;
 
-  // --------
-  // Data query (paged, schedule-driven)
-  // --------
   const dataQuery = `
     SELECT
       l.id,
@@ -89,23 +86,23 @@ export async function getClientsLoansList(req, res) {
       l.tenure_value,
       l.tenure_unit,
       l.repayment_type,
+      l.collection_weekday,
       l.status,
-      
 
-      /* Outstanding = sum of unpaid schedules (+ fine) */
+      /* Outstanding = unpaid schedules only */
       COALESCE((
         SELECT SUM(ls2.due_amount + ls2.fine_amount)
         FROM loan_schedule ls2
         WHERE ls2.loan_id = l.id
-          AND ls2.status IN ('PENDING', 'DELAYED')
+          AND ls2.status IN ('PENDING', 'OVERDUE')
       ), 0) AS outstanding,
 
-      /* Next EMI date = next pending/delayed schedule */
+      /* Next EMI date */
       (
         SELECT MIN(ls3.due_date)
         FROM loan_schedule ls3
         WHERE ls3.loan_id = l.id
-          AND ls3.status IN ('PENDING', 'DELAYED')
+          AND ls3.status IN ('PENDING', 'OVERDUE')
       ) AS next_emi_date
 
     FROM loans l
@@ -137,6 +134,7 @@ export async function getClientsLoansList(req, res) {
     });
   } catch (err) {
     console.error("Error fetching loans list:", err);
+
     return res.status(500).json({
       success: false,
       message: "Failed to fetch loans list",

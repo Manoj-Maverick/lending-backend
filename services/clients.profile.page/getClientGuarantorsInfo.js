@@ -15,7 +15,7 @@ import db from "../../db.js";
  * - 500 for any DB / server error
  */
 export const getCustomerGuarantors = async (req, res) => {
-  const { customerId } = req.params;
+  const customerId = req.params.borrowerId || req.params.customerId;
 
   // 1. Basic validation
   if (!customerId || isNaN(Number(customerId))) {

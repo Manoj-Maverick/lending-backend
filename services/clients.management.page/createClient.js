@@ -1,16 +1,7 @@
 import pool from "../../db.js";
 import fs from "fs";
 import path from "path";
-
-// 🔐 TEMP encryption placeholders (replace with real crypto later)
-function encrypt(text) {
-  if (!text) return null;
-  return Buffer.from(text).toString("base64"); // placeholder
-}
-function last4(text) {
-  if (!text) return null;
-  return text.slice(-4);
-}
+import { encrypt, last4 } from "../../utils/cryto.js";
 
 export const createCustomer = async (req, res) => {
   const client = await pool.connect();
@@ -40,10 +31,10 @@ export const createCustomer = async (req, res) => {
       ifscCode,
       accountType,
       accountHolderName,
-      branch, // this should be branch_id or branch_code mapping
+      branch,
       customerCode,
 
-      // guarantor fields (optional)
+      // guarantor fields
       guarantorFullName,
       guarantorPhone,
       guarantorRelation,
@@ -56,6 +47,27 @@ export const createCustomer = async (req, res) => {
       guarantorState,
       guarantorPincode,
     } = req.body;
+
+    // 0️⃣ Duplicate check
+    const duplicateCheck = await client.query(
+      `
+      SELECT id, customer_code, full_name, phone
+      FROM customers
+      WHERE phone = $1
+         OR aadhaar_last4 = $2
+         OR pan_last4 = $3
+      LIMIT 1
+      `,
+      [phone, last4(aadhaarNumber), last4(panNumber)],
+    );
+
+    if (duplicateCheck.rows.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: "Customer may already exist",
+        existingCustomer: duplicateCheck.rows[0],
+      });
+    }
 
     await client.query("BEGIN");
 
@@ -84,7 +96,7 @@ export const createCustomer = async (req, res) => {
 
     const customerResult = await client.query(insertCustomer, [
       customerCode,
-      branch, // ⚠️ ideally branch_id, not code
+      branch,
       fullName,
       phone,
       alternatePhone || null,
@@ -146,8 +158,9 @@ export const createCustomer = async (req, res) => {
       await saveDoc(files.addressProof[0], "ADDRESS_PROOF");
     if (files.incomeProof) await saveDoc(files.incomeProof[0], "INCOME_PROOF");
 
-    // 4️⃣ Optional: Insert guarantor
+    // 4️⃣ Optional guarantor
     let guarantorId = null;
+
     if (guarantorFullName && guarantorPhone && guarantorRelation) {
       const insertGuarantor = `
         INSERT INTO guarantors (
@@ -180,13 +193,13 @@ export const createCustomer = async (req, res) => {
 
       guarantorId = gRes.rows[0].id;
 
-      // create guarantor folder
       const guarantorDir = path.join(
         process.cwd(),
         "uploads",
         "guarantors",
         String(guarantorId),
       );
+
       fs.mkdirSync(guarantorDir, { recursive: true });
     }
 

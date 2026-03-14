@@ -34,7 +34,7 @@ export async function getWeeklyLoanSummaryByBranch(req, res) {
         UNION ALL SELECT 'SUN'
       ) d
       LEFT JOIN loans l
-        ON l.week_day = d.weekday
+        ON l.collection_weekday = d.weekday
        AND l.status = 'ACTIVE'
        AND l.branch_id = $1
       GROUP BY d.weekday

@@ -16,7 +16,7 @@ import pool from "../../db.js";
  * READ-ONLY endpoint.
  */
 export async function getCustomerProfile(req, res) {
-  const { id } = req.params;
+  const id = req.params.borrowerId || req.params.id;
 
   // 1. Validate input
   if (!id || isNaN(Number(id))) {

@@ -3,12 +3,11 @@ import pool from "../../db.js";
 export const getTodayCollections = async (req, res) => {
   try {
     let { start_date, end_date, branch_id } = req.query;
-    console.log("Today Collections Params:", {
-      start_date,
-      end_date,
-      branch_id,
-    });
-    if (branch_id == "null") branch_id = null;
+
+    // Convert string "null" to actual null
+    if (branch_id === "null" || branch_id === "") {
+      branch_id = null;
+    }
 
     const result = await pool.query(
       `
@@ -20,7 +19,14 @@ export const getTodayCollections = async (req, res) => {
           c.full_name AS "clientName",
           c.customer_code AS "clientCode",
           c.phone,
-          (SELECT cd.file_url from customer_documents cd WHERE cd.customer_id = c.id AND cd.document_type = 'PHOTO' LIMIT 1) AS profile_pic,
+
+          (
+            SELECT cd.file_url
+            FROM customer_documents cd
+            WHERE cd.customer_id = c.id
+            AND cd.document_type = 'PHOTO'
+            LIMIT 1
+          ) AS profile_pic,
 
           l.loan_code,
           l.id AS "loanId",
@@ -28,6 +34,7 @@ export const getTodayCollections = async (req, res) => {
 
           CASE
             WHEN ls.status = 'PAID' THEN 'Paid'
+            WHEN ls.status = 'DELAYED' THEN 'Delayed'
             WHEN ls.due_date < CURRENT_DATE THEN 'Overdue'
             ELSE 'Pending'
           END AS status
@@ -38,15 +45,19 @@ export const getTodayCollections = async (req, res) => {
 
       WHERE ls.due_date BETWEEN $1 AND $2
       AND ($3::INT IS NULL OR l.branch_id = $3)
+      AND l.status = 'ACTIVE'
+      AND ls.status IN ('PENDING', 'OVERDUE')
 
       ORDER BY ls.due_date ASC
       `,
-      [start_date, end_date, branch_id || null],
+      [start_date, end_date, branch_id],
     );
 
     res.json(result.rows);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to load collections" });
+    console.error("getTodayCollections error:", err);
+    res.status(500).json({
+      error: "Failed to load collections",
+    });
   }
 };
