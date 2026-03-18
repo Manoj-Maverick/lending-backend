@@ -1,4 +1,4 @@
-import pool from "../db.js";
+import { getNextSequence } from "./nextSequence.js";
 
 export async function generateBranchCode(branchType, district, area) {
   const typeMap = {
@@ -13,45 +13,24 @@ export async function generateBranchCode(branchType, district, area) {
     throw new Error("Invalid branch type");
   }
 
-  // District code (first 3 letters)
   const districtCode = district
     .toUpperCase()
     .replace(/[^A-Z]/g, "")
     .slice(0, 3);
 
-  // Area code (remove vowels for nicer abbreviations)
   const areaCode = area
     .toUpperCase()
     .replace(/[^A-Z]/g, "")
     .replace(/[AEIOU]/g, "")
     .slice(0, 3);
 
-  const prefix = `${typeCode}-${districtCode}${areaCode}`;
+  const cityArea = `${districtCode}${areaCode}`;
 
-  const result = await pool.query(
-    `
-    SELECT branch_code
-    FROM branches
-    WHERE branch_code LIKE $1
-    ORDER BY branch_code DESC
-    LIMIT 1
-    `,
-    [`${prefix}%`],
-  );
+  const key = `BRANCH_${cityArea}`;
 
-  let nextNumber = 1;
+  const seq = await getNextSequence(key);
 
-  if (result.rows.length > 0) {
-    const lastCode = result.rows[0].branch_code;
+  const seqStr = String(seq).padStart(3, "0");
 
-    const lastSeq = parseInt(lastCode.slice(-3), 10);
-
-    if (!isNaN(lastSeq)) {
-      nextNumber = lastSeq + 1;
-    }
-  }
-
-  const seq = String(nextNumber).padStart(3, "0");
-
-  return `${prefix}${seq}`;
+  return `${typeCode}-${cityArea}${seqStr}`;
 }

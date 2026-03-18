@@ -1,11 +1,13 @@
+// middleware/multer.js
 import multer from "multer";
 import path from "path";
 import fs from "fs";
 
-// ensure tmp dir exists
+// 1️⃣ Ensure tmp directory exists
 const tmpDir = path.join(process.cwd(), "uploads", "tmp");
 fs.mkdirSync(tmpDir, { recursive: true });
 
+// 2️⃣ Storage config
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, tmpDir);
@@ -17,7 +19,22 @@ const storage = multer.diskStorage({
   },
 });
 
+// 3️⃣ File filter (VERY IMPORTANT 🔥)
+function fileFilter(req, file, cb) {
+  const allowedTypes = ["image/jpeg", "image/png", "application/pdf"];
+
+  if (!allowedTypes.includes(file.mimetype)) {
+    return cb(new Error("Only JPG, PNG, PDF allowed"), false);
+  }
+
+  cb(null, true);
+}
+
+// 4️⃣ Multer instance
 export const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB
+  },
 });

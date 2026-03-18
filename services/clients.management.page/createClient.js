@@ -1,7 +1,6 @@
 import pool from "../../db.js";
-import fs from "fs";
-import path from "path";
 import { encrypt, last4 } from "../../utils/cryto.js";
+import { uploadDocumentCore } from "../document.core.js";
 
 export const createCustomer = async (req, res) => {
   const client = await pool.connect();
@@ -21,7 +20,8 @@ export const createCustomer = async (req, res) => {
       panNumber,
       addressLine1,
       addressLine2,
-      city,
+      area,
+      district,
       state,
       pincode,
       residenceType,
@@ -81,7 +81,8 @@ export const createCustomer = async (req, res) => {
         bank_account_no, bank_name, ifsc_code, account_holder_name,
         dob, gender, marital_status, occupation, monthly_income,
         aadhaar_enc, aadhaar_last4, pan_enc, pan_last4,
-        residence_type, years_at_address, account_type
+        residence_type, years_at_address, account_type,
+        district
       )
       VALUES (
         $1, $2, $3, $4, $5, $6,
@@ -89,7 +90,7 @@ export const createCustomer = async (req, res) => {
         $11, $12, $13, $14,
         $15, $16, $17, $18, $19,
         $20, $21, $22, $23,
-        $24, $25, $26
+        $24, $25, $26, $27
       )
       RETURNING id
     `;
@@ -102,7 +103,7 @@ export const createCustomer = async (req, res) => {
       alternatePhone || null,
       email || null,
       address || null,
-      city || null,
+      area || null,
       state || null,
       pincode || null,
       accountNumber || null,
@@ -121,44 +122,55 @@ export const createCustomer = async (req, res) => {
       residenceType || null,
       yearsAtAddress || null,
       accountType || null,
+      district,
     ]);
 
     const customerId = customerResult.rows[0].id;
 
-    // 2️⃣ Create customer folder
-    const customerDir = path.join(
-      process.cwd(),
-      "uploads",
-      "customers",
-      String(customerId),
-    );
-    fs.mkdirSync(customerDir, { recursive: true });
-
-    // 3️⃣ Save documents
+    // 2️⃣ Save customer documents using CORE
     const files = req.files || {};
 
-    const saveDoc = async (file, type) => {
-      const newPath = path.join(customerDir, file.filename);
-      fs.renameSync(file.path, newPath);
+    if (files.photo) {
+      await uploadDocumentCore({
+        category: "customer",
+        entity_id: customerId,
+        document_type: "PHOTO",
+        file: files.photo[0],
+        uploaded_by: req.user?.id || null,
+      });
+    }
 
-      const fileUrl = `/uploads/customers/${customerId}/${file.filename}`;
+    if (files.idProof) {
+      await uploadDocumentCore({
+        category: "customer",
+        entity_id: customerId,
+        document_type: "ID_PROOF",
+        file: files.idProof[0],
+        uploaded_by: req.user?.id || null,
+      });
+    }
 
-      await client.query(
-        `
-        INSERT INTO customer_documents (customer_id, document_type, file_url)
-        VALUES ($1, $2, $3)
-        `,
-        [customerId, type, fileUrl],
-      );
-    };
+    if (files.addressProof) {
+      await uploadDocumentCore({
+        category: "customer",
+        entity_id: customerId,
+        document_type: "ADDRESS_PROOF",
+        file: files.addressProof[0],
+        uploaded_by: req.user?.id || null,
+      });
+    }
 
-    if (files.photo) await saveDoc(files.photo[0], "PHOTO");
-    if (files.idProof) await saveDoc(files.idProof[0], "ID_PROOF");
-    if (files.addressProof)
-      await saveDoc(files.addressProof[0], "ADDRESS_PROOF");
-    if (files.incomeProof) await saveDoc(files.incomeProof[0], "INCOME_PROOF");
+    if (files.incomeProof) {
+      await uploadDocumentCore({
+        category: "customer",
+        entity_id: customerId,
+        document_type: "INCOME_PROOF",
+        file: files.incomeProof[0],
+        uploaded_by: req.user?.id || null,
+      });
+    }
 
-    // 4️⃣ Optional guarantor
+    // 3️⃣ Optional guarantor
     let guarantorId = null;
 
     if (guarantorFullName && guarantorPhone && guarantorRelation) {
@@ -193,14 +205,7 @@ export const createCustomer = async (req, res) => {
 
       guarantorId = gRes.rows[0].id;
 
-      const guarantorDir = path.join(
-        process.cwd(),
-        "uploads",
-        "guarantors",
-        String(guarantorId),
-      );
-
-      fs.mkdirSync(guarantorDir, { recursive: true });
+      // (Optional) You can add guarantor docs here later using same core
     }
 
     await client.query("COMMIT");
@@ -214,7 +219,11 @@ export const createCustomer = async (req, res) => {
   } catch (err) {
     await client.query("ROLLBACK");
     console.error("Create customer failed:", err);
-    res.status(500).json({ error: "Failed to create customer" });
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to create customer",
+    });
   } finally {
     client.release();
   }

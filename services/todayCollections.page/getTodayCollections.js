@@ -24,7 +24,7 @@ export const getTodayCollections = async (req, res) => {
             SELECT cd.file_url
             FROM customer_documents cd
             WHERE cd.customer_id = c.id
-            AND cd.document_type = 'PHOTO'
+            AND cd.document_type = 'PHOTO' AND cd.is_active = true
             LIMIT 1
           ) AS profile_pic,
 

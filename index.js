@@ -39,6 +39,21 @@ import { getBranchTodayPayments } from "./services/loans.details.page/getBranchT
 import { forecloseLoan } from "./services/loans.details.page/foreCloseLoan.js";
 import { sendOtp, verifyOtp } from "./services/others.services/otp.service.js";
 import { generateNewBranchCode } from "./services/generators.services/newBranchCode.js";
+import { generateNewCustomerCode } from "./services/generators.services/newCustomerCode.js";
+import { generateNewLoanCode } from "./services/generators.services/newLoanCode.js";
+import {
+  fetchCustomerDocuments,
+  fetchGuarantorDocuments,
+  fetchLoanDocuments,
+} from "./services/document.controller.js";
+import {
+  uploadDocument,
+  deleteDocument,
+} from "./services/document.controller.js";
+import {
+  blockCustomer,
+  getBlockStatus,
+} from "./services/clients.profile.page/blockCustomer.js";
 import path from "path";
 import cookieParser from "cookie-parser";
 const app = express();
@@ -122,6 +137,7 @@ app.get(
   getWeeklyLoanSummaryByBranch,
 );
 app.get("/api/branch-details/borrowers/:branchId", getBranchCustomers);
+
 // borrower management page routes
 app.get("/api/borrowers-management/borrowers-list", getBorrowersList);
 app.post(
@@ -141,6 +157,8 @@ app.get("/api/borrower-profile/:borrowerId/guarantors", getBorrowerGuarantors);
 app.get("/api/borrower-profile/:borrowerId/loans", getBorrowerLoans);
 app.post("/api/loans/create", upload.none(), createLoan);
 app.post("/api/loans/record-payment", recordPayment);
+app.put("/api/customers/:customerId/block", blockCustomer);
+app.get("/api/get-block-status/:customerId/isBlocked", getBlockStatus);
 // loan management page routes
 app.get("/api/loans-management/loans-list", getBorrowerLoansList);
 app.get("/api/loans-management/stats", getLoansManagementStats);
@@ -166,6 +184,16 @@ app.post("/api/verifyOTP", verifyOtp);
 
 //generators routes
 app.post("/api/generate-next-branch-code", generateNewBranchCode);
+app.post("/api/generate-next-customer-code", generateNewCustomerCode);
+app.post("/api/generate-next-loan-code", generateNewLoanCode);
+
+// documents route
+app.get("/api/documents/customer/:customerId", fetchCustomerDocuments);
+app.get("/api/documents/guarantor/:guarantorId", fetchGuarantorDocuments);
+app.get("/api/documents/loan/:loanId", fetchLoanDocuments);
+app.post("/api/documents", upload.single("file"), uploadDocument);
+
+app.delete("/api/documents/:id", deleteDocument);
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, "0.0.0.0", () => {

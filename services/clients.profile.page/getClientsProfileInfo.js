@@ -49,6 +49,7 @@ export async function getCustomerProfile(req, res) {
     c.aadhaar_enc,
     c.aadhaar_last4,
     c.pan_last4,
+    c.is_blacklisted AS is_blocked,
 
     b.branch_name,
     b.id AS branch_id,
@@ -142,6 +143,7 @@ export async function getCustomerProfile(req, res) {
         outstanding: Number(row.outstanding),
       },
       photo_url: row.photo_url,
+      is_blocked: row.is_blocked,
     };
 
     return res.json(response);
