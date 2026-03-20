@@ -22,6 +22,7 @@ export async function getBranchCustomers(req, res) {
       sortDir = "asc",
       page = 1,
       pageSize = 5,
+      blockStatus = "all",
     } = req.query;
 
     // Convert page + pageSize into limit + offset (for SQL pagination)
@@ -32,7 +33,7 @@ export async function getBranchCustomers(req, res) {
     const result = await pool.query(
       `
       SELECT *
-      FROM get_branch_customers($1, $2, $3, $4, $5, $6, $7)
+      FROM get_branch_customers($1, $2, $3, $4, $5, $6, $7,$8)
       `,
       [
         Number(branchId), // p_branch_id
@@ -42,6 +43,7 @@ export async function getBranchCustomers(req, res) {
         sortDir, // p_sort_dir
         limit, // p_limit
         offset, // p_offset
+        blockStatus,
       ],
     );
 

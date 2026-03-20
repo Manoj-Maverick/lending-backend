@@ -1,0 +1,17 @@
+# Frontend
+Main/node_modules/
+dist/
+build/
+
+# Backend
+node_modules/
+.env
+
+# IDE/editor
+.idea/
+.vscode/
+
+# Logs
+*.log
+
+uploads/

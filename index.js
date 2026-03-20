@@ -54,6 +54,7 @@ import {
   blockCustomer,
   getBlockStatus,
 } from "./services/clients.profile.page/blockCustomer.js";
+import { getBorrowerStats } from "./services/clients.management.page/getClientsManagemnetKpis.js";
 import path from "path";
 import cookieParser from "cookie-parser";
 const app = express();
@@ -150,6 +151,7 @@ app.post(
   ]),
   createBorrower,
 );
+app.get("/api/borrowers/stats", getBorrowerStats);
 
 // borrower profile page routes
 app.get("/api/borrower-profile/:borrowerId/profile", getBorrowerProfile);
