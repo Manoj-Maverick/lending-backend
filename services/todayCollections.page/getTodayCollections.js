@@ -24,7 +24,8 @@ export const getTodayCollections = async (req, res) => {
             SELECT cd.file_url
             FROM customer_documents cd
             WHERE cd.customer_id = c.id
-            AND cd.document_type = 'PHOTO' AND cd.is_active = true
+            AND cd.document_type = 'PHOTO' 
+            AND cd.is_active = true
             LIMIT 1
           ) AS profile_pic,
 
@@ -35,7 +36,6 @@ export const getTodayCollections = async (req, res) => {
           CASE
             WHEN ls.status = 'PAID' THEN 'Paid'
             WHEN ls.status = 'DELAYED' THEN 'Delayed'
-            WHEN ls.due_date < CURRENT_DATE THEN 'Overdue'
             ELSE 'Pending'
           END AS status
 
@@ -44,9 +44,10 @@ export const getTodayCollections = async (req, res) => {
       JOIN customers c ON c.id = l.customer_id
 
       WHERE ls.due_date BETWEEN $1 AND $2
+      AND ls.due_date >= CURRENT_DATE   -- ✅ ONLY TODAY + FUTURE
       AND ($3::INT IS NULL OR l.branch_id = $3)
       AND l.status = 'ACTIVE'
-      AND ls.status IN ('PENDING', 'OVERDUE')
+      AND ls.status = 'PENDING'         -- ✅ REMOVE OVERDUE
 
       ORDER BY ls.due_date ASC
       `,

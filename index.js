@@ -55,6 +55,8 @@ import {
   getBlockStatus,
 } from "./services/clients.profile.page/blockCustomer.js";
 import { getBorrowerStats } from "./services/clients.management.page/getClientsManagemnetKpis.js";
+import { getOverdueCount } from "./services/todayCollections.page/getOverDueCount.js";
+import { getOverdueCollections } from "./services/todayCollections.page/getOverDueCollections.js";
 import path from "path";
 import cookieParser from "cookie-parser";
 const app = express();
@@ -137,7 +139,7 @@ app.get(
   "/api/branch-details/weekly-loan-summary/:branchId",
   getWeeklyLoanSummaryByBranch,
 );
-app.get("/api/branch-details/borrowers/:branchId", getBranchCustomers);
+app.post("/api/branch-details/borrowers/:branchId", getBranchCustomers);
 
 // borrower management page routes
 app.get("/api/borrowers-management/borrowers-list", getBorrowersList);
@@ -173,7 +175,8 @@ app.post("/api/loans/:loanId/fore-close-loan", forecloseLoan);
 
 // today collections page routes
 app.get("/api/today-collections", getTodayCollections);
-
+app.get("/api/collections/overdue-count", getOverdueCount);
+app.get("/api/collections/overdue", getOverdueCollections);
 // staffs management page routes
 app.get("/api/staffs-management/staffs-list", getStaffsList);
 // settings page routes
