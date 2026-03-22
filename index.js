@@ -65,7 +65,7 @@ const app = express();
 app.use(cookieParser());
 app.use(
   cors({
-    origin: ["http://localhost:3000", "http://localhost:5173"],
+    origin: ["http://localhost:3000", "http://localhost:5173","https://lending-frontend-six.vercel.app"],
     credentials: true,
   })
 );
