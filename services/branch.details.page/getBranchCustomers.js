@@ -43,7 +43,7 @@ export async function getBranchCustomers(req, res) {
         -- ✅ camelCase mapping
         t.is_blocked AS "isBlocked",
         t.loan_status AS "loanStatus",
-        t.photo_url AS "photo",
+        t.photo_url AS "avatar",
 
         COUNT(*) OVER() AS total_count
 

@@ -25,3 +25,4 @@ export async function sendEmail({ subject, text, html }) {
     console.error("Email sending failed:", err);
   }
 }
+

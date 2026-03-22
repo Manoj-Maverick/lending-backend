@@ -2,6 +2,7 @@
 import pool from "../db.js";
 import fs from "fs";
 import { storeFile } from "./storage.service.js";
+import cloudinary from "../Routes/couldinery.js";
 
 /**
  * Deactivate old document (same type)
@@ -38,8 +39,8 @@ async function deactivateOld({
 
     await client.query(
       `UPDATE loan_documents
-     SET is_active = false
-     WHERE loan_id = $1 AND document_type = $2 AND is_active = true`,
+       SET is_active = false
+       WHERE loan_id = $1 AND document_type = $2 AND is_active = true`,
       [loan_id, document_type],
     );
   }
@@ -56,19 +57,22 @@ async function insertDocument({
   document_type,
   file,
   file_url,
+  public_id,
   uploaded_by,
 }) {
+  // CUSTOMER
   if (category === "customer") {
     const { rows } = await client.query(
       `INSERT INTO customer_documents
-       (customer_id, document_type, file_name, file_url, mime_type, file_size, uploaded_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7)
+       (customer_id, document_type, file_name, file_url, public_id, mime_type, file_size, uploaded_by)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
        RETURNING *`,
       [
         entity_id,
         document_type,
         file.originalname,
         file_url,
+        public_id,
         file.mimetype,
         file.size,
         uploaded_by,
@@ -77,17 +81,19 @@ async function insertDocument({
     return rows[0];
   }
 
+  // GUARANTOR
   if (category === "guarantor") {
     const { rows } = await client.query(
       `INSERT INTO guarantor_documents
-       (guarantor_id, document_type, file_name, file_url, mime_type, file_size, uploaded_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7)
+       (guarantor_id, document_type, file_name, file_url, public_id, mime_type, file_size, uploaded_by)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
        RETURNING *`,
       [
         entity_id,
         document_type,
         file.originalname,
         file_url,
+        public_id,
         file.mimetype,
         file.size,
         uploaded_by,
@@ -96,11 +102,12 @@ async function insertDocument({
     return rows[0];
   }
 
+  // LOAN
   if (category === "loan") {
     const { rows } = await client.query(
       `INSERT INTO loan_documents
-       (loan_id, customer_id, document_type, file_name, file_url, mime_type, file_size, uploaded_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+       (loan_id, customer_id, document_type, file_name, file_url, public_id, mime_type, file_size, uploaded_by)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
        RETURNING *`,
       [
         loan_id,
@@ -108,6 +115,7 @@ async function insertDocument({
         document_type,
         file.originalname,
         file_url,
+        public_id,
         file.mimetype,
         file.size,
         uploaded_by,
@@ -120,7 +128,7 @@ async function insertDocument({
 }
 
 /**
- * 🔥 MAIN FUNCTION (use everywhere)
+ * MAIN UPLOAD FUNCTION
  */
 export async function uploadDocumentCore({
   category,
@@ -135,15 +143,15 @@ export async function uploadDocumentCore({
   try {
     await client.query("BEGIN");
 
-    // 1️⃣ Store file (via storage layer)
-    const file_url = await storeFile({
+    // Upload to Cloudinary
+    const { url: file_url, public_id } = await storeFile({
       file,
       category,
       entity_id,
       loan_id,
     });
 
-    // 2️⃣ Deactivate old version
+    // Deactivate old document
     await deactivateOld({
       client,
       category,
@@ -152,7 +160,7 @@ export async function uploadDocumentCore({
       document_type,
     });
 
-    // 3️⃣ Insert new document
+    // Insert new record
     const doc = await insertDocument({
       client,
       category,
@@ -161,6 +169,7 @@ export async function uploadDocumentCore({
       document_type,
       file,
       file_url,
+      public_id,
       uploaded_by,
     });
 
@@ -170,7 +179,6 @@ export async function uploadDocumentCore({
   } catch (err) {
     await client.query("ROLLBACK");
 
-    // cleanup tmp file if still exists
     if (file?.path && fs.existsSync(file.path)) {
       fs.unlinkSync(file.path);
     }
@@ -182,27 +190,30 @@ export async function uploadDocumentCore({
 }
 
 /**
- * Soft delete document
+ * DELETE DOCUMENT (WITH CLOUDINARY CLEANUP)
  */
 export async function deleteDocumentCore({ category, id }) {
-  if (category === "customer") {
-    await pool.query(
-      `UPDATE customer_documents SET is_active = false WHERE id = $1`,
-      [id],
-    );
+  let table = "";
+
+  if (category === "customer") table = "customer_documents";
+  if (category === "guarantor") table = "guarantor_documents";
+  if (category === "loan") table = "loan_documents";
+
+  if (!table) throw new Error("Invalid category");
+
+  // Get public_id
+  const { rows } = await pool.query(
+    `SELECT public_id FROM ${table} WHERE id = $1`,
+    [id],
+  );
+
+  const public_id = rows[0]?.public_id;
+
+  // Delete from Cloudinary
+  if (public_id) {
+    await cloudinary.uploader.destroy(public_id);
   }
 
-  if (category === "guarantor") {
-    await pool.query(
-      `UPDATE guarantor_documents SET is_active = false WHERE id = $1`,
-      [id],
-    );
-  }
-
-  if (category === "loan") {
-    await pool.query(
-      `UPDATE loan_documents SET is_active = false WHERE id = $1`,
-      [id],
-    );
-  }
+  // Soft delete in DB
+  await pool.query(`UPDATE ${table} SET is_active = false WHERE id = $1`, [id]);
 }
