@@ -72,14 +72,25 @@ app.use(
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 app.use(express.json());
 
+// health check route
+app.get("/api/health", (req, res) => {
+  res.json({ status: "OK" });
+});
+
 // Auth routes
 app.post("/api/auth/login", login);
+app.post("/api/generateOTP", sendOtp);
+app.post("/api/verifyOTP", verifyOtp);
+
+// Protect all remaining API routes by default.
+// app.use("/api", requireAuth);
+
 app.post("/api/auth/logout", logout);
 app.get("/api/auth/me", getMe);
 
 // user crud routes
 app.post("/api/users/create", requireAuth, requireRole(["ADMIN"]), addUser);
-app.get("/api/users", getUsers);
+app.get("/api/users", requireRole(["ADMIN"]), getUsers);
 
 app.get("/test-db", async (req, res) => {
   try {
@@ -179,12 +190,8 @@ app.get("/api/collections/overdue", getOverdueCollections);
 // staffs management page routes
 app.get("/api/staffs-management/staffs-list", getStaffsList);
 // settings page routes
-app.get("/api/settings", loadSettings);
-app.post("/api/settings", requireAuth, requireRole(["ADMIN"]), updateSettings);
-
-// opt routes
-app.post("/api/generateOTP", sendOtp);
-app.post("/api/verifyOTP", verifyOtp);
+app.get("/api/settings", requireRole(["ADMIN"]), loadSettings);
+app.post("/api/settings", requireRole(["ADMIN"]), updateSettings);
 
 //generators routes
 app.post("/api/generate-next-branch-code", generateNewBranchCode);
