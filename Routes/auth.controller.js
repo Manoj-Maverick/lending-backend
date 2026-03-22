@@ -44,8 +44,8 @@ export async function login(req, res) {
   // 🔐 SET COOKIE (KEY CHANGE)
   res.cookie("auth_token", token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    secure: true,
+    sameSite: "none",
     maxAge: 24 * 60 * 60 * 1000,
   });
 
@@ -55,7 +55,7 @@ export async function login(req, res) {
 export function logout(req, res) {
   res.clearCookie("auth_token", {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: "none",
     secure: process.env.NODE_ENV === "production",
   });
 
