@@ -190,8 +190,8 @@ app.get("/api/collections/overdue", getOverdueCollections);
 // staffs management page routes
 app.get("/api/staffs-management/staffs-list", getStaffsList);
 // settings page routes
-app.get("/api/settings", requireRole(["ADMIN"]), loadSettings);
-app.post("/api/settings", requireRole(["ADMIN"]), updateSettings);
+app.get("/api/settings",loadSettings);
+app.post("/api/settings",updateSettings);
 
 //generators routes
 app.post("/api/generate-next-branch-code", generateNewBranchCode);
