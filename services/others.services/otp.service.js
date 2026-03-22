@@ -4,7 +4,7 @@ export async function sendOtp(req, res) {
   try {
     const { phone } = req.body;
 
-    await sendOTP(Number(phone));
+    await sendOTP(Number(phone), false);
 
     res.json({
       success: true,

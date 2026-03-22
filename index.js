@@ -117,7 +117,6 @@ app.get("/api/branches", async (req, res) => {
 // dashboard summary route (KPIs)
 app.get("/api/dashboard/summary", getDashboardKpis);
 app.get("/api/dashboard/daily-collection-summary", getWeeklyCollection);
-4;
 app.get("/api/dashboard/today-payments", getTodayPayments);
 app.get("/api/dashboard/branch-comparison", getBranchComparison);
 

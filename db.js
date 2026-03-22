@@ -28,3 +28,5 @@ const pool = new Pool({
 });
 
 export default pool;
+
+console.log("env variables loaded:", process.env);
