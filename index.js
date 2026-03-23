@@ -45,11 +45,11 @@ import {
   fetchCustomerDocuments,
   fetchGuarantorDocuments,
   fetchLoanDocuments,
-} from "./services/document.controller.js";
+} from "./services/docs.service/document.controller.js";
 import {
   uploadDocument,
   deleteDocument,
-} from "./services/document.controller.js";
+} from "./services/docs.service/document.controller.js";
 import {
   blockCustomer,
   getBlockStatus,
@@ -57,6 +57,8 @@ import {
 import { getBorrowerStats } from "./services/clients.management.page/getClientsManagemnetKpis.js";
 import { getOverdueCount } from "./services/todayCollections.page/getOverDueCount.js";
 import { getOverdueCollections } from "./services/todayCollections.page/getOverDueCollections.js";
+import { getUploadSignature } from "./services/docs.service/couldinery.signature.js";
+
 import path from "path";
 import cookieParser from "cookie-parser";
 const app = express();
@@ -213,6 +215,7 @@ app.get("/api/documents/customer/:customerId", fetchCustomerDocuments);
 app.get("/api/documents/guarantor/:guarantorId", fetchGuarantorDocuments);
 app.get("/api/documents/loan/:loanId", fetchLoanDocuments);
 app.post("/api/documents", upload.single("file"), uploadDocument);
+app.post("/api/cloudinary-signature", requireAuth, getUploadSignature);
 
 app.delete("/api/documents/:id", deleteDocument);
 

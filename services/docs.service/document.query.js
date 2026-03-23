@@ -1,4 +1,4 @@
-import pool from "../db.js";
+import pool from "../../db.js";
 export async function getCustomerDocuments(customer_id) {
   const { rows } = await pool.query(
     `SELECT id, document_type AS type, file_name AS name,

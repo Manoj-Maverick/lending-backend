@@ -1,6 +1,6 @@
 import pool from "../../db.js";
 import { encrypt, last4 } from "../../utils/cryto.js";
-import { uploadDocumentCore } from "../document.core.js";
+import { uploadDocumentCore } from "../docs.service/document.core.js";
 
 export const createCustomer = async (req, res) => {
   const client = await pool.connect();

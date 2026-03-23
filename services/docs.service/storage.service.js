@@ -44,7 +44,7 @@
 //   return finalPath.replace(process.cwd(), "").replace(/\\/g, "/");
 // }
 
-import cloudinary from "../Routes/couldinery.js";
+import cloudinary from "../../Routes/couldinery.js";
 import fs from "fs";
 
 /**

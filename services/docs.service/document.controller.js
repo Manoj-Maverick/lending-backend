@@ -11,51 +11,51 @@ import {
  */
 export async function uploadDocument(req, res) {
   try {
-    const { category, document_type, entity_id, loan_id } = req.body;
-    console.log(req.body);
-
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: "No file uploaded",
-      });
-    }
+    const {
+      category,
+      document_type,
+      entity_id,
+      loan_id,
+      file_url,
+      public_id,
+      file_name,
+      mime_type,
+      file_size,
+    } = req.body;
 
     if (!category || !document_type) {
-      return res.status(400).json({
-        success: false,
-        message: "Missing required fields",
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    // 🚀 NEW: direct cloud upload flow
+    if (file_url && public_id) {
+      const doc = await uploadDocumentCore({
+        category,
+        entity_id: entity_id ? Number(entity_id) : null,
+        loan_id: loan_id ? Number(loan_id) : null,
+        document_type,
+        file: {
+          originalname: file_name || "uploaded",
+          mimetype: mime_type || "auto",
+          size: file_size || 0,
+        },
+        file_url,
+        public_id,
+        uploaded_by: req.user?.id || null,
+      });
+
+      return res.status(201).json({
+        success: true,
+        data: doc,
       });
     }
 
-    if (category === "loan" && !loan_id) {
-      return res.status(400).json({ message: "loan_id required" });
+    // fallback (optional)
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
     }
-
-    if (category !== "loan" && !entity_id) {
-      return res.status(400).json({ message: "entity_id required" });
-    }
-
-    const doc = await uploadDocumentCore({
-      category,
-      entity_id: entity_id ? Number(entity_id) : null,
-      loan_id: loan_id ? Number(loan_id) : null,
-      document_type,
-      file: req.file,
-      uploaded_by: req.user?.id || null,
-    });
-
-    res.status(201).json({
-      success: true,
-      data: doc,
-    });
   } catch (err) {
-    console.error("Upload failed:", err);
-
-    res.status(500).json({
-      success: false,
-      message: err.message || "Upload failed",
-    });
+    res.status(500).json({ message: err.message });
   }
 }
 
