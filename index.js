@@ -65,9 +65,15 @@ const app = express();
 app.use(cookieParser());
 app.use(
   cors({
-    origin: ["http://localhost:3000", "http://localhost:5173","https://lending-frontend-six.vercel.app","https://sridurgafinancecapitals.netlify.app","https://lending-frontend-git-lendweb-up-3ecdda-manoj-mavericks-projects.vercel.app"],
+    origin: [
+      "http://localhost:3000",
+      "http://localhost:5173",
+      "https://lending-frontend-six.vercel.app",
+      "https://sridurgafinancecapitals.netlify.app",
+      "https://lending-frontend-git-lendweb-up-3ecdda-manoj-mavericks-projects.vercel.app",
+    ],
     credentials: true,
-  })
+  }),
 );
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 app.use(express.json());
@@ -83,14 +89,18 @@ app.post("/api/generateOTP", sendOtp);
 app.post("/api/verifyOTP", verifyOtp);
 
 // Protect all remaining API routes by default.
-// app.use("/api", requireAuth);
+app.use("/api", requireAuth);
 
 app.post("/api/auth/logout", logout);
 app.get("/api/auth/me", getMe);
 
 // user crud routes
 app.post("/api/users/create", requireAuth, requireRole(["ADMIN"]), addUser);
-app.get("/api/users", requireRole(["ADMIN"]), getUsers);
+app.get("/api/users", getUsers);
+
+app.get("/api/health", (req, res) => {
+  res.json({ status: "OK" });
+});
 
 app.get("/test-db", async (req, res) => {
   try {
@@ -190,8 +200,8 @@ app.get("/api/collections/overdue", getOverdueCollections);
 // staffs management page routes
 app.get("/api/staffs-management/staffs-list", getStaffsList);
 // settings page routes
-app.get("/api/settings",loadSettings);
-app.post("/api/settings",updateSettings);
+app.get("/api/settings", loadSettings);
+app.post("/api/settings", updateSettings);
 
 //generators routes
 app.post("/api/generate-next-branch-code", generateNewBranchCode);

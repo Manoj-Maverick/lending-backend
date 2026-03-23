@@ -13,6 +13,7 @@ export function requireAuth(req, res, next) {
       ...decoded,
       id: decoded.userId,
     };
+    console.log("Authenticated user:", req.user);
     next();
   } catch {
     return res.status(401).json({ error: "Invalid or expired session" });
