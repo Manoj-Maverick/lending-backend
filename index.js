@@ -25,6 +25,12 @@ import { getDashboardKpis } from "./services/dashboard.page/getDashboardKpis.js"
 import { getLoanProfileInfo } from "./services/loans.details.page/getLoanProfileInfo.js";
 import { getLoanSchedule } from "./services/loans.details.page/getLoanSchedule.js";
 import { getStaffsList } from "./services/staffs-management.page/getStaffsList.js";
+import { createStaff } from "./services/staffs-management.page/createStaff.js";
+import { updateStaff } from "./services/staffs-management.page/updateStaff.js";
+import { deleteStaff } from "./services/staffs-management.page/deleteStaff.js";
+import { getStaffDetail } from "./services/staffs-management.page/getStaffDetail.js";
+import { getStaffAttendance } from "./services/staffs-management.page/getStaffAttendance.js";
+import { saveStaffAttendance } from "./services/staffs-management.page/saveStaffAttendance.js";
 import { createBranch } from "./services/branches.management.page/createBranch.js";
 import { updateBranch } from "./services/branch.details.page/updateBranch.js";
 import { upload } from "./Routes/multer.js";
@@ -58,7 +64,7 @@ import { getBorrowerStats } from "./services/clients.management.page/getClientsM
 import { getOverdueCount } from "./services/todayCollections.page/getOverDueCount.js";
 import { getOverdueCollections } from "./services/todayCollections.page/getOverDueCollections.js";
 import { getUploadSignature } from "./services/docs.service/couldinery.signature.js";
-
+import { generateLoanAgreementDoc } from "./services/docs.service/documnetGen.js";
 import path from "path";
 import cookieParser from "cookie-parser";
 const app = express();
@@ -91,7 +97,7 @@ app.post("/api/generateOTP", sendOtp);
 app.post("/api/verifyOTP", verifyOtp);
 
 // Protect all remaining API routes by default.
-app.use("/api", requireAuth);
+// app.use("/api", requireAuth);
 
 app.post("/api/auth/logout", logout);
 app.get("/api/auth/me", getMe);
@@ -201,6 +207,18 @@ app.get("/api/collections/overdue-count", getOverdueCount);
 app.get("/api/collections/overdue", getOverdueCollections);
 // staffs management page routes
 app.get("/api/staffs-management/staffs-list", getStaffsList);
+app.post("/api/staffs-management/staffs", createStaff);
+app.get("/api/staffs-management/staffs/:staffId", getStaffDetail);
+app.put("/api/staffs-management/staffs/:staffId", updateStaff);
+app.delete("/api/staffs-management/staffs/:staffId", deleteStaff);
+app.get(
+  "/api/staffs-management/staffs/:staffId/attendance",
+  getStaffAttendance,
+);
+app.post(
+  "/api/staffs-management/staffs/:staffId/attendance",
+  saveStaffAttendance,
+);
 // settings page routes
 app.get("/api/settings", loadSettings);
 app.post("/api/settings", updateSettings);
@@ -216,8 +234,26 @@ app.get("/api/documents/guarantor/:guarantorId", fetchGuarantorDocuments);
 app.get("/api/documents/loan/:loanId", fetchLoanDocuments);
 app.post("/api/documents", upload.single("file"), uploadDocument);
 app.post("/api/cloudinary-signature", requireAuth, getUploadSignature);
-
 app.delete("/api/documents/:id", deleteDocument);
+
+// generate document route
+app.post("/api/documents/generate/loan/:loanId", async (req, res) => {
+  try {
+    const { loanId } = req.params;
+
+    const result = await generateLoanAgreementDoc(Number(loanId));
+
+    res.json({
+      success: true,
+      url: result.url,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      error: err.message || "Failed to generate document",
+    });
+  }
+});
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, "0.0.0.0", () => {

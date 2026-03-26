@@ -27,7 +27,9 @@
     "nodemailer": "^8.0.2",
     "nodemon": "^3.1.14",
     "pg": "^8.17.1",
+    "puppeteer": "^24.40.0",
     "redis-server": "^1.2.2",
+    "streamifier": "^0.1.1",
     "twilio": "^5.13.0",
     "uuid": "^13.0.0"
   }

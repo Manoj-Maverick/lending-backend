@@ -18,7 +18,7 @@ export const getOverdueCount = async (req, res) => {
       WHERE 
           -- 🔥 SAME LOGIC AS LIST API
           ls.due_date < CURRENT_DATE
-          AND ls.status != 'PAID'
+          AND ls.status IN ('PENDING', 'OVERDUE')
 
           AND l.status = 'ACTIVE'
           AND ($1::INT IS NULL OR l.branch_id = $1)

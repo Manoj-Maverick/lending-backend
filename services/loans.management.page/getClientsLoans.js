@@ -11,7 +11,9 @@ export async function getClientsLoansList(req, res) {
     page = "1",
     pageSize = "20",
     collectionDay = "all",
+    repaymentType = "all", // ✅ NEW
   } = req.query;
+
   console.log(req.query);
 
   const pageNum = Math.max(1, Number(page) || 1);
@@ -22,13 +24,13 @@ export async function getClientsLoansList(req, res) {
   const whereClauses = [];
   let idx = 1;
 
-  // Status filter
+  // 🔹 Status filter
   if (status !== "all") {
     params.push(status.toUpperCase());
     whereClauses.push(`l.status = $${idx++}`);
   }
 
-  // Branch filter
+  // 🔹 Branch filter
   if (branch !== "all") {
     const branchId = Number(branch);
     if (Number.isNaN(branchId)) {
@@ -42,13 +44,19 @@ export async function getClientsLoansList(req, res) {
     whereClauses.push(`l.branch_id = $${idx++}`);
   }
 
-  // Collection weekday filter
+  // 🔹 Collection weekday filter
   if (collectionDay !== "all") {
     params.push(collectionDay.toUpperCase());
     whereClauses.push(`l.collection_weekday = $${idx++}`);
   }
 
-  // Search filter
+  // 🔥 NEW: Repayment type filter
+  if (repaymentType && repaymentType !== "all") {
+    params.push(repaymentType.toUpperCase());
+    whereClauses.push(`l.repayment_type = $${idx++}`);
+  }
+
+  // 🔹 Search filter
   if (search && search.trim() !== "") {
     params.push(`%${search}%`);
     whereClauses.push(`
@@ -85,6 +93,8 @@ export async function getClientsLoansList(req, res) {
       l.interest_rate,
       l.tenure_value,
       l.tenure_unit,
+
+      -- ✅ repayment type included
       l.repayment_type,
       l.collection_weekday,
       l.status,

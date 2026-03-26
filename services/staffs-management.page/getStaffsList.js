@@ -1,4 +1,5 @@
 import db from "../../db.js";
+import { SORT_MAP } from "./staff.utils.js";
 
 /**
  * GET /api/staff
@@ -12,7 +13,6 @@ import db from "../../db.js";
  *  - pageSize
  */
 export async function getStaffsList(req, res) {
-  console.log("Received getStaffsList request with params:", req.query);
   const {
     search = "",
     branch = "all",
@@ -22,16 +22,13 @@ export async function getStaffsList(req, res) {
     page = 1,
     pageSize = 10,
   } = req.query;
-  console.log("Receiveds getStaffsList request with params:", req.query);
-
   const limit = Math.max(Number(pageSize), 1);
   const offset = (Math.max(Number(page), 1) - 1) * limit;
 
   const params = [];
-  let whereClauses = [];
+  const whereClauses = [];
   let idx = 1;
 
-  // 🔎 Search filter
   if (search && search.trim() !== "") {
     params.push(`%${search}%`);
     whereClauses.push(`
@@ -45,13 +42,11 @@ export async function getStaffsList(req, res) {
     idx++;
   }
 
-  // 🏢 Branch filter (by branch name)
   if (branch !== "all") {
     params.push(Number(branch));
     whereClauses.push(`b.id = $${idx++}`);
   }
 
-  // 🧑 Role filter (by role name)
   if (role !== "all") {
     params.push(role);
     whereClauses.push(`r.role_name = $${idx++}`);
@@ -60,41 +55,58 @@ export async function getStaffsList(req, res) {
   const whereSQL =
     whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
 
-  // ✅ Whitelist sortable columns (security)
-  const SORT_MAP = {
-    name: "e.full_name",
-    email: "e.email",
-    role: "r.role_name",
-    branch: "b.branch_name",
-    status: "e.is_active",
-    joinDate: "e.join_date",
-  };
-
   const orderByCol = SORT_MAP[sortKey] || "e.full_name";
   const orderDir = sortDir?.toLowerCase() === "desc" ? "DESC" : "ASC";
 
   const listQuery = `
     SELECT
       e.id,
+      e.user_id AS "userId",
       e.employee_code AS code,
       e.full_name AS name,
+      u.username,
       e.email,
       e.phone,
+      e.address,
+      e.city,
+      e.state,
+      e.pincode,
+      e.designation,
+      e.salary,
       r.role_name AS role,
+      b.id AS "branchId",
       b.branch_name AS branch,
       e.is_active AS status,
-      e.join_date AS "joinDate"
+      e.join_date AS "joinDate",
+      sd.date_of_birth AS "dateOfBirth",
+      sd.gender,
+      sd.alternate_phone AS "alternatePhone",
+      sd.marital_status AS "maritalStatus",
+      sd.blood_group AS "bloodGroup",
+      sd.emergency_contact_name AS "emergencyContactName",
+      sd.emergency_contact_phone AS "emergencyContactPhone",
+      sd.emergency_contact_relationship AS "emergencyContactRelationship",
+      sd.father_name AS "fatherName",
+      sd.mother_name AS "motherName",
+      sd.aadhaar_number AS "aadhaarNumber",
+      sd.pan_number AS "panNumber",
+      sd.bank_name AS "bankName",
+      sd.account_holder_name AS "accountHolderName",
+      sd.bank_account_number AS "bankAccountNumber",
+      sd.ifsc_code AS "ifscCode",
+      sd.account_type AS "accountType",
+      sd.education,
+      sd.experience_years AS "experienceYears",
+      sd.notes
     FROM employees e
     JOIN users u ON u.id = e.user_id
     JOIN roles r ON r.id = u.role_id
     LEFT JOIN branches b ON b.id = e.branch_id
+    LEFT JOIN staff_details sd ON sd.employee_id = e.id
     ${whereSQL}
     ORDER BY ${orderByCol} ${orderDir}
     LIMIT $${idx} OFFSET $${idx + 1};
   `;
-
-  console.log("Constructed SQL Query:", listQuery);
-  console.log("With parameters:", [...params, limit, offset]);
 
   const countQuery = `
     SELECT COUNT(*)::int AS total
@@ -112,7 +124,7 @@ export async function getStaffsList(req, res) {
       db.query(listQuery, listParams),
       db.query(countQuery, params),
     ]);
-    console.log("Staff list query result:", listResult.rows);
+
     return res.json({
       success: true,
       data: listResult.rows,

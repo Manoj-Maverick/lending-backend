@@ -31,6 +31,7 @@ export async function getLoanProfileInfo(req, res) {
       l.processing_fee,
       l.penalty_rate,
       l.closure_reason,
+      l.repayment_type,
 
       -- Outstanding = total_payable - paid
       COALESCE(l.total_payable - COALESCE(SUM(p.paid_amount), 0), l.total_payable) AS remaining_balance,

@@ -39,6 +39,7 @@ export async function getCustomerLoans(req, res) {
       l.total_payable,
       l.status,
       l.start_date,
+      l.repayment_type,
       COALESCE(l.total_payable - COALESCE(SUM(p.paid_amount), 0), l.total_payable) AS outstanding
     FROM loans l
     LEFT JOIN payments p ON p.loan_id = l.id

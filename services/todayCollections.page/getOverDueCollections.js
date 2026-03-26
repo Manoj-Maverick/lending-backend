@@ -57,7 +57,7 @@ export const getOverdueCollections = async (req, res) => {
       WHERE 
           -- 🔥 CORE FIX (DO NOT depend on status)
           ls.due_date < CURRENT_DATE
-          AND ls.status != 'PAID'
+          AND ls.status IN ('PENDING', 'OVERDUE')
 
           -- optional filters
           AND ($1::date IS NULL OR ls.due_date >= $1)
