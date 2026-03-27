@@ -52,8 +52,9 @@ export async function getStaffsList(req, res) {
     whereClauses.push(`r.role_name = $${idx++}`);
   }
 
-  const whereSQL =
-    whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
+  whereClauses.unshift(`r.role_name <> 'ADMIN'`);
+
+  const whereSQL = `WHERE ${whereClauses.join(" AND ")}`;
 
   const orderByCol = SORT_MAP[sortKey] || "e.full_name";
   const orderDir = sortDir?.toLowerCase() === "desc" ? "DESC" : "ASC";

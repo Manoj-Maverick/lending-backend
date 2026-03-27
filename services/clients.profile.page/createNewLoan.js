@@ -75,8 +75,11 @@ export const createLoan = async (req, res) => {
         penalty_rate,
         grace_days,
         status,
+        requested_by,
+        requested_at,
         approved_by,
-        approved_at
+        approved_at,
+        rejection_reason
       )
       VALUES (
         $1,$2,$3,$4,
@@ -84,7 +87,7 @@ export const createLoan = async (req, res) => {
         $9,$10,$11,$12,$13,
         $14,$15,$16,$17,
         $18,$19,$20,
-        'ACTIVE',$21,$22
+        $21,$22,$23,$24,$25
       )
       RETURNING id
       `,
@@ -109,8 +112,12 @@ export const createLoan = async (req, res) => {
         Number(financial.processing_fee || 0),
         Number(financial.penalty_rate || 0),
         Number(financial.grace_days || 0),
-        status.approved_by,
-        status.approved_at,
+        status.status || "ACTIVE",
+        req.user?.id || null,
+        new Date().toISOString(),
+        status.approved_by || null,
+        status.approved_at || null,
+        null,
       ],
     );
 

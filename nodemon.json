@@ -1,0 +1,13 @@
+{
+  "watch": ["index.js", "Routes", "services", "utils", "dispatch", "scripts"],
+  "ext": "js,mjs,cjs,json",
+  "ignore": [
+    "node_modules/**",
+    "uploads/**",
+    "sql/**",
+    "templates/**",
+    "generators/**",
+    "*.pdf",
+    "*.log"
+  ]
+}

@@ -21,6 +21,8 @@ import { getCustomerGuarantors as getBorrowerGuarantors } from "./services/clien
 import { getCustomerLoans as getBorrowerLoans } from "./services/clients.profile.page/getClientLoans.js";
 import { getClientsLoansList as getBorrowerLoansList } from "./services/loans.management.page/getClientsLoans.js";
 import { getLoansManagementStats } from "./services/loans.management.page/getClientsLoansStatsByBranch.js";
+import { getPendingLoanRequests } from "./services/loans.management.page/getPendingLoanRequests.js";
+import { reviewLoanRequest } from "./services/loans.management.page/reviewLoanRequest.js";
 import { getDashboardKpis } from "./services/dashboard.page/getDashboardKpis.js";
 import { getLoanProfileInfo } from "./services/loans.details.page/getLoanProfileInfo.js";
 import { getLoanSchedule } from "./services/loans.details.page/getLoanSchedule.js";
@@ -51,6 +53,7 @@ import {
   fetchCustomerDocuments,
   fetchGuarantorDocuments,
   fetchLoanDocuments,
+  fetchStaffDocuments,
 } from "./services/docs.service/document.controller.js";
 import {
   uploadDocument,
@@ -64,7 +67,10 @@ import { getBorrowerStats } from "./services/clients.management.page/getClientsM
 import { getOverdueCount } from "./services/todayCollections.page/getOverDueCount.js";
 import { getOverdueCollections } from "./services/todayCollections.page/getOverDueCollections.js";
 import { getUploadSignature } from "./services/docs.service/couldinery.signature.js";
-import { generateLoanAgreementDoc } from "./services/docs.service/documnetGen.js";
+import {
+  generateLoanAgreementDoc,
+  generateLoanStatementDoc,
+} from "./services/docs.service/documnetGen.js";
 import path from "path";
 import cookieParser from "cookie-parser";
 const app = express();
@@ -187,13 +193,38 @@ app.get("/api/borrowers/stats", getBorrowerStats);
 app.get("/api/borrower-profile/:borrowerId/profile", getBorrowerProfile);
 app.get("/api/borrower-profile/:borrowerId/guarantors", getBorrowerGuarantors);
 app.get("/api/borrower-profile/:borrowerId/loans", getBorrowerLoans);
-app.post("/api/loans/create", upload.none(), createLoan);
+app.post(
+  "/api/loans/create",
+  requireAuth,
+  upload.fields([
+    { name: "guarantor_photo", maxCount: 1 },
+    { name: "guarantor_aadhar_doc", maxCount: 1 },
+    { name: "guarantor_pan_doc", maxCount: 1 },
+    { name: "loan_agreement", maxCount: 1 },
+    { name: "promissory_note", maxCount: 1 },
+    { name: "signature_sheet", maxCount: 1 },
+    { name: "other_document", maxCount: 1 },
+  ]),
+  createLoan,
+);
 app.post("/api/loans/record-payment", recordPayment);
 app.put("/api/customers/:customerId/block", blockCustomer);
 app.get("/api/get-block-status/:customerId/isBlocked", getBlockStatus);
 // loan management page routes
 app.get("/api/loans-management/loans-list", getBorrowerLoansList);
 app.get("/api/loans-management/stats", getLoansManagementStats);
+app.get(
+  "/api/loans-management/pending-requests",
+  requireAuth,
+  requireRole(["ADMIN", "BRANCH_MANAGER"]),
+  getPendingLoanRequests,
+);
+app.post(
+  "/api/loans/:loanId/review",
+  requireAuth,
+  requireRole(["ADMIN", "BRANCH_MANAGER"]),
+  reviewLoanRequest,
+);
 
 // loan details page routes
 app.get("/api/loans/:loanId/details", getLoanProfileInfo);
@@ -232,6 +263,7 @@ app.post("/api/generate-next-loan-code", generateNewLoanCode);
 app.get("/api/documents/customer/:customerId", fetchCustomerDocuments);
 app.get("/api/documents/guarantor/:guarantorId", fetchGuarantorDocuments);
 app.get("/api/documents/loan/:loanId", fetchLoanDocuments);
+app.get("/api/documents/staff/:staffId", fetchStaffDocuments);
 app.post("/api/documents", upload.single("file"), uploadDocument);
 app.post("/api/cloudinary-signature", requireAuth, getUploadSignature);
 app.delete("/api/documents/:id", deleteDocument);
@@ -251,6 +283,24 @@ app.post("/api/documents/generate/loan/:loanId", async (req, res) => {
     console.error(err);
     res.status(500).json({
       error: err.message || "Failed to generate document",
+    });
+  }
+});
+
+app.post("/api/documents/generate/loan/:loanId/statement", async (req, res) => {
+  try {
+    const { loanId } = req.params;
+
+    const result = await generateLoanStatementDoc(Number(loanId));
+
+    res.json({
+      success: true,
+      url: result.url,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      error: err.message || "Failed to generate statement document",
     });
   }
 });

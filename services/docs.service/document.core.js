@@ -40,8 +40,17 @@ async function deactivateOld({
     await client.query(
       `UPDATE loan_documents
        SET is_active = false
-       WHERE loan_id = $1 AND document_type = $2 AND is_active = true`,
+      WHERE loan_id = $1 AND document_type = $2 AND is_active = true`,
       [loan_id, document_type],
+    );
+  }
+
+  if (category === "staff") {
+    await client.query(
+      `UPDATE staff_documents
+       SET is_active = false
+       WHERE employee_id = $1 AND document_type = $2 AND is_active = true`,
+      [entity_id, document_type],
     );
   }
 }
@@ -109,6 +118,26 @@ async function insertDocument({
       [
         loan_id,
         null,
+        document_type,
+        file.originalname,
+        file_url,
+        public_id,
+        file.mimetype,
+        file.size,
+        uploaded_by,
+      ],
+    );
+    return rows[0];
+  }
+
+  if (category === "staff") {
+    const { rows } = await client.query(
+      `INSERT INTO staff_documents
+       (employee_id, document_type, file_name, file_url, public_id, mime_type, file_size, uploaded_by)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+       RETURNING *`,
+      [
+        entity_id,
         document_type,
         file.originalname,
         file_url,
@@ -206,6 +235,7 @@ export async function deleteDocumentCore({ category, id }) {
   if (category === "customer") table = "customer_documents";
   if (category === "guarantor") table = "guarantor_documents";
   if (category === "loan") table = "loan_documents";
+  if (category === "staff") table = "staff_documents";
 
   if (!table) throw new Error("Invalid category");
 

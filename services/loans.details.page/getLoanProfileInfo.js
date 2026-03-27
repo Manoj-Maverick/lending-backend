@@ -44,18 +44,22 @@ export async function getLoanProfileInfo(req, res) {
       c.email,
 
       -- Approval
+      requester.full_name AS requested_by_name,
+      l.requested_at,
       u.full_name AS approved_by,
-      l.approved_at
+      l.approved_at,
+      l.rejection_reason
 
     FROM loans l
     JOIN customers c ON c.id = l.customer_id
     JOIN branches b ON b.id = l.branch_id
+    LEFT JOIN users requester ON requester.id = l.requested_by
     LEFT JOIN users u ON u.id = l.approved_by
     LEFT JOIN payments p ON p.loan_id = l.id
 
     WHERE l.id = $1
     GROUP BY
-      l.id, b.branch_name, c.full_name, c.customer_code, c.phone, c.email, u.full_name,c.id
+      l.id, b.branch_name, c.full_name, c.customer_code, c.phone, c.email, u.full_name, requester.full_name, c.id
   `;
 
   try {

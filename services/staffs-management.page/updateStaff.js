@@ -125,6 +125,9 @@ export async function updateStaff(req, res) {
     return res.json({
       success: true,
       message: "Staff member updated successfully",
+      data: {
+        id: staffId,
+      },
     });
   } catch (err) {
     await client.query("ROLLBACK");

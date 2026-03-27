@@ -14,8 +14,6 @@ export async function getClientsLoansList(req, res) {
     repaymentType = "all", // ✅ NEW
   } = req.query;
 
-  console.log(req.query);
-
   const pageNum = Math.max(1, Number(page) || 1);
   const limitNum = Math.min(100, Math.max(1, Number(pageSize) || 20));
   const offset = (pageNum - 1) * limitNum;
@@ -98,6 +96,10 @@ export async function getClientsLoansList(req, res) {
       l.repayment_type,
       l.collection_weekday,
       l.status,
+      l.requested_at,
+      l.rejection_reason,
+      requester.full_name AS requested_by_name,
+      approver.full_name AS approved_by_name,
 
       /* Outstanding = unpaid schedules only */
       COALESCE((
@@ -118,6 +120,8 @@ export async function getClientsLoansList(req, res) {
     FROM loans l
     JOIN customers c ON c.id = l.customer_id
     JOIN branches b ON b.id = l.branch_id
+    LEFT JOIN users requester ON requester.id = l.requested_by
+    LEFT JOIN users approver ON approver.id = l.approved_by
 
     ${whereSQL}
 

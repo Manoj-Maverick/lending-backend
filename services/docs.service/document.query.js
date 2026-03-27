@@ -34,3 +34,15 @@ export async function getLoanDocuments(loan_id) {
 
   return rows;
 }
+
+export async function getStaffDocuments(employee_id) {
+  const { rows } = await pool.query(
+    `SELECT id, document_type AS type, file_name AS name,
+            file_url AS url, file_size AS size, uploaded_at
+     FROM staff_documents
+     WHERE employee_id = $1 AND is_active = true`,
+    [employee_id],
+  );
+
+  return rows;
+}

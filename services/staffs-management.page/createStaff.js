@@ -104,6 +104,9 @@ export async function createStaff(req, res) {
     return res.status(201).json({
       success: true,
       message: "Staff member created successfully",
+      data: {
+        id: employeeResult.rows[0].id,
+      },
     });
   } catch (err) {
     await client.query("ROLLBACK");

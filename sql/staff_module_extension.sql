@@ -40,3 +40,49 @@ CREATE TABLE IF NOT EXISTS public.staff_attendance (
 
 CREATE INDEX IF NOT EXISTS idx_staff_attendance_employee_date
 ON public.staff_attendance (employee_id, attendance_date DESC);
+
+CREATE TABLE IF NOT EXISTS public.staff_documents (
+    id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    employee_id integer NOT NULL REFERENCES public.employees(id) ON DELETE CASCADE,
+    document_type character varying(100) NOT NULL,
+    file_name character varying(255) NOT NULL,
+    file_url text NOT NULL,
+    public_id character varying(255),
+    mime_type character varying(100),
+    file_size bigint,
+    uploaded_by integer REFERENCES public.users(id) ON DELETE SET NULL,
+    is_active boolean DEFAULT true NOT NULL,
+    uploaded_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_staff_documents_employee
+ON public.staff_documents (employee_id, is_active, uploaded_at DESC);
+
+ALTER TABLE public.loans
+DROP CONSTRAINT IF EXISTS loans_status_check;
+
+ALTER TABLE public.loans
+ADD CONSTRAINT loans_status_check
+CHECK (
+    (status)::text = ANY (
+        (
+            ARRAY[
+                'ACTIVE'::character varying,
+                'PENDING_APPROVAL'::character varying,
+                'CLOSED'::character varying,
+                'FORECLOSED'::character varying,
+                'CANCELLED'::character varying,
+                'REJECTED'::character varying
+            ]
+        )::text[]
+    )
+);
+
+ALTER TABLE public.loans
+ADD COLUMN IF NOT EXISTS requested_by integer REFERENCES public.users(id) ON DELETE SET NULL;
+
+ALTER TABLE public.loans
+ADD COLUMN IF NOT EXISTS requested_at timestamp without time zone;
+
+ALTER TABLE public.loans
+ADD COLUMN IF NOT EXISTS rejection_reason text;

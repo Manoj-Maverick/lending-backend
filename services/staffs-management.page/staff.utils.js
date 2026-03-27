@@ -102,6 +102,14 @@ export function normalizeStaffPayload(body, { requirePassword = false } = {}) {
     throw error;
   }
 
+  if (!["BRANCH_MANAGER", "STAFF"].includes(payload.role)) {
+    const error = new Error(
+      "Staff module supports only BRANCH_MANAGER and STAFF roles",
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+
   if (!payload.joinDate) {
     const error = new Error("Join date is required");
     error.statusCode = 400;
@@ -120,14 +128,10 @@ export function normalizeStaffPayload(body, { requirePassword = false } = {}) {
     throw error;
   }
 
-  if (payload.role !== "ADMIN" && !payload.branchId) {
-    const error = new Error("Branch is required for this role");
+  if (!payload.branchId) {
+    const error = new Error("Branch is required for staff and managers");
     error.statusCode = 400;
     throw error;
-  }
-
-  if (payload.role === "ADMIN") {
-    payload.branchId = null;
   }
 
   return payload;

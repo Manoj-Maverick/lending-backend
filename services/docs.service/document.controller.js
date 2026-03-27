@@ -4,6 +4,7 @@ import {
   getCustomerDocuments,
   getGuarantorDocuments,
   getLoanDocuments,
+  getStaffDocuments,
 } from "./document.query.js";
 
 /**
@@ -133,6 +134,18 @@ export async function fetchLoanDocuments(req, res) {
     const { loanId } = req.params;
 
     const data = await getLoanDocuments(loanId);
+
+    res.json({ success: true, data });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+export async function fetchStaffDocuments(req, res) {
+  try {
+    const { staffId } = req.params;
+
+    const data = await getStaffDocuments(staffId);
 
     res.json({ success: true, data });
   } catch (err) {
