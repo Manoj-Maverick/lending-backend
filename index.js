@@ -71,6 +71,13 @@ import {
   generateLoanAgreementDoc,
   generateLoanStatementDoc,
 } from "./services/docs.service/documnetGen.js";
+import { createExpense } from "./services/expenses.page/createExpense.js";
+import { getExpenseCategories } from "./services/expenses.page/getExpenseCategories.js";
+import { getExpenses } from "./services/expenses.page/getExpenses.js";
+import { getExpenseSummary } from "./services/expenses.page/getExpenseSummary.js";
+import { getMonthlyTrend } from "./services/expenses.page/getMonthlyTrend.js";
+import { getStaffSalary } from "./services/expenses.page/getStaffSalary.js";
+import { saveStaffSalary } from "./services/expenses.page/saveStaffSalary.js";
 import path from "path";
 import cookieParser from "cookie-parser";
 const app = express();
@@ -253,6 +260,15 @@ app.post(
 // settings page routes
 app.get("/api/settings", loadSettings);
 app.post("/api/settings", updateSettings);
+
+// expense module routes
+app.get("/api/expense-categories", getExpenseCategories);
+app.post("/api/expenses", createExpense);
+app.get("/api/expenses", getExpenses);
+app.get("/api/expenses/summary", getExpenseSummary);
+app.get("/api/expenses/monthly-trend", getMonthlyTrend);
+app.get("/api/staff-salary", getStaffSalary);
+app.post("/api/staff-salary", saveStaffSalary);
 
 //generators routes
 app.post("/api/generate-next-branch-code", generateNewBranchCode);

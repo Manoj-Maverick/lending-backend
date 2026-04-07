@@ -59,9 +59,23 @@ export async function getCustomerProfile(req, res) {
 
     COUNT(DISTINCT l.id) AS total_loans,
     COUNT(DISTINCT l.id) FILTER (WHERE l.status = 'ACTIVE') AS active_loans,
-    COALESCE(SUM(DISTINCT l.total_payable), 0) AS total_disbursed,
-    COALESCE(SUM(DISTINCT l.total_payable), 0)
-      - COALESCE(SUM(p.paid_amount), 0) AS outstanding
+    COALESCE(
+      SUM(DISTINCT l.total_payable) FILTER (
+        WHERE l.status NOT IN ('PENDING_APPROVAL', 'REJECTED', 'CANCELLED')
+      ),
+      0
+    ) AS total_disbursed,
+    COALESCE(
+      SUM(DISTINCT l.total_payable) FILTER (
+        WHERE l.status NOT IN ('PENDING_APPROVAL', 'REJECTED', 'CANCELLED')
+      ),
+      0
+    ) - COALESCE(
+      SUM(p.paid_amount) FILTER (
+        WHERE l.status NOT IN ('PENDING_APPROVAL', 'REJECTED', 'CANCELLED')
+      ),
+      0
+    ) AS outstanding
 
   FROM customers c
 

@@ -30,10 +30,19 @@ export async function getLoansManagementStats(req, res) {
       COUNT(*) FILTER (WHERE l.status = 'CLOSED') AS closed_loans,
       COUNT(*) FILTER (WHERE l.status = 'FORECLOSED') AS foreclosed_loans,
 
-      COALESCE(SUM(l.total_payable),0) AS total_disbursed,
+      COALESCE(
+        SUM(l.total_payable) FILTER (
+          WHERE l.status NOT IN ('PENDING_APPROVAL', 'REJECTED', 'CANCELLED')
+        ),
+        0
+      ) AS total_disbursed,
 
       COALESCE(
-        SUM(l.total_payable) - SUM(COALESCE(pay.total_paid,0)),
+        SUM(l.total_payable) FILTER (
+          WHERE l.status NOT IN ('PENDING_APPROVAL', 'REJECTED', 'CANCELLED')
+        ) - SUM(COALESCE(pay.total_paid,0)) FILTER (
+          WHERE l.status NOT IN ('PENDING_APPROVAL', 'REJECTED', 'CANCELLED')
+        ),
         0
       ) AS total_outstanding
 

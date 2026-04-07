@@ -33,8 +33,11 @@ export async function getLoanProfileInfo(req, res) {
       l.closure_reason,
       l.repayment_type,
 
-      -- Outstanding = total_payable - paid
-      COALESCE(l.total_payable - COALESCE(SUM(p.paid_amount), 0), l.total_payable) AS remaining_balance,
+      -- Outstanding applies only to approved/disbursed loans
+      CASE
+        WHEN l.status IN ('PENDING_APPROVAL', 'REJECTED', 'CANCELLED') THEN 0
+        ELSE COALESCE(l.total_payable - COALESCE(SUM(p.paid_amount), 0), l.total_payable)
+      END AS remaining_balance,
 
       -- Client
       c.id AS client_id,

@@ -98,12 +98,22 @@ export async function getStaffsList(req, res) {
       sd.account_type AS "accountType",
       sd.education,
       sd.experience_years AS "experienceYears",
-      sd.notes
+      sd.notes,
+      photo.file_url AS photo
     FROM employees e
     JOIN users u ON u.id = e.user_id
     JOIN roles r ON r.id = u.role_id
     LEFT JOIN branches b ON b.id = e.branch_id
     LEFT JOIN staff_details sd ON sd.employee_id = e.id
+    LEFT JOIN LATERAL (
+      SELECT file_url
+      FROM staff_documents
+      WHERE employee_id = e.id
+        AND document_type = 'PHOTO'
+        AND is_active = TRUE
+      ORDER BY uploaded_at DESC, id DESC
+      LIMIT 1
+    ) photo ON TRUE
     ${whereSQL}
     ORDER BY ${orderByCol} ${orderDir}
     LIMIT $${idx} OFFSET $${idx + 1};

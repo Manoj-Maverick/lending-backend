@@ -101,21 +101,27 @@ export async function getClientsLoansList(req, res) {
       requester.full_name AS requested_by_name,
       approver.full_name AS approved_by_name,
 
-      /* Outstanding = unpaid schedules only */
-      COALESCE((
-        SELECT SUM(ls2.due_amount + ls2.fine_amount)
-        FROM loan_schedule ls2
-        WHERE ls2.loan_id = l.id
-          AND ls2.status IN ('PENDING', 'OVERDUE')
-      ), 0) AS outstanding,
+      /* Outstanding applies only after approval/disbursement */
+      CASE
+        WHEN l.status IN ('PENDING_APPROVAL', 'REJECTED', 'CANCELLED') THEN 0
+        ELSE COALESCE((
+          SELECT SUM(ls2.due_amount + ls2.fine_amount)
+          FROM loan_schedule ls2
+          WHERE ls2.loan_id = l.id
+            AND ls2.status IN ('PENDING', 'OVERDUE')
+        ), 0)
+      END AS outstanding,
 
-      /* Next EMI date */
-      (
-        SELECT MIN(ls3.due_date)
-        FROM loan_schedule ls3
-        WHERE ls3.loan_id = l.id
-          AND ls3.status IN ('PENDING', 'OVERDUE')
-      ) AS next_emi_date
+      /* Next EMI date only for approved/disbursed loans */
+      CASE
+        WHEN l.status IN ('PENDING_APPROVAL', 'REJECTED', 'CANCELLED') THEN NULL
+        ELSE (
+          SELECT MIN(ls3.due_date)
+          FROM loan_schedule ls3
+          WHERE ls3.loan_id = l.id
+            AND ls3.status IN ('PENDING', 'OVERDUE')
+        )
+      END AS next_emi_date
 
     FROM loans l
     JOIN customers c ON c.id = l.customer_id

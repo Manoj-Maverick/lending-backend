@@ -45,6 +45,7 @@ export async function getStaffDetail(req, res) {
         sd.education,
         sd.experience_years AS "experienceYears",
         sd.notes,
+        photo.file_url AS photo,
         COALESCE(attendance.present_days, 0) AS "presentDays",
         COALESCE(attendance.absent_days, 0) AS "absentDays",
         COALESCE(attendance.leave_days, 0) AS "leaveDays"
@@ -53,6 +54,15 @@ export async function getStaffDetail(req, res) {
       JOIN roles r ON r.id = u.role_id
       LEFT JOIN branches b ON b.id = e.branch_id
       LEFT JOIN staff_details sd ON sd.employee_id = e.id
+      LEFT JOIN LATERAL (
+        SELECT file_url
+        FROM staff_documents
+        WHERE employee_id = e.id
+          AND document_type = 'PHOTO'
+          AND is_active = TRUE
+        ORDER BY uploaded_at DESC, id DESC
+        LIMIT 1
+      ) photo ON TRUE
       LEFT JOIN (
         SELECT
           employee_id,

@@ -30,6 +30,30 @@ export async function getLoanSchedule(req, res) {
   `;
 
   try {
+    const loanResult = await db.query(
+      `SELECT status FROM loans WHERE id = $1 LIMIT 1`,
+      [parsedLoanId],
+    );
+
+    if (loanResult.rowCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Loan not found",
+      });
+    }
+
+    const loanStatus = loanResult.rows[0].status;
+    const isApprovedLoan = !["PENDING_APPROVAL", "REJECTED", "CANCELLED"].includes(
+      loanStatus,
+    );
+
+    if (!isApprovedLoan) {
+      return res.json({
+        success: true,
+        data: [],
+      });
+    }
+
     const { rows } = await db.query(query, [parsedLoanId]);
 
     return res.json({

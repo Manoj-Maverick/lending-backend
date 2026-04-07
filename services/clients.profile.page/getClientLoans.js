@@ -40,7 +40,10 @@ export async function getCustomerLoans(req, res) {
       l.status,
       l.start_date,
       l.repayment_type,
-      COALESCE(l.total_payable - COALESCE(SUM(p.paid_amount), 0), l.total_payable) AS outstanding
+      CASE
+        WHEN l.status IN ('PENDING_APPROVAL', 'REJECTED', 'CANCELLED') THEN 0
+        ELSE COALESCE(l.total_payable - COALESCE(SUM(p.paid_amount), 0), l.total_payable)
+      END AS outstanding
     FROM loans l
     LEFT JOIN payments p ON p.loan_id = l.id
     WHERE l.customer_id = $1
@@ -53,13 +56,21 @@ export async function getCustomerLoans(req, res) {
     SELECT
       COUNT(*) AS total_loans,
       COUNT(*) FILTER (WHERE status = 'ACTIVE') AS active_loans,
-      COALESCE(SUM(principal_amount), 0) AS total_disbursed,
       COALESCE(
-        SUM(total_payable) - COALESCE((
+        SUM(principal_amount) FILTER (
+          WHERE status NOT IN ('PENDING_APPROVAL', 'REJECTED', 'CANCELLED')
+        ),
+        0
+      ) AS total_disbursed,
+      COALESCE(
+        SUM(total_payable) FILTER (
+          WHERE status NOT IN ('PENDING_APPROVAL', 'REJECTED', 'CANCELLED')
+        ) - COALESCE((
           SELECT SUM(p.paid_amount)
           FROM loans l2
           LEFT JOIN payments p ON p.loan_id = l2.id
           WHERE l2.customer_id = $1
+            AND l2.status NOT IN ('PENDING_APPROVAL', 'REJECTED', 'CANCELLED')
         ), 0),
         0
       ) AS total_outstanding
