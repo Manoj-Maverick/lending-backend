@@ -4,6 +4,7 @@ import pool from "../db.js";
 
 export async function login(req, res) {
   const { username, password } = req.body;
+  console.log(req.body);
 
   if (!username || !password) {
     return res.status(400).json({ error: "Missing credentials" });
@@ -44,8 +45,8 @@ export async function login(req, res) {
   // 🔐 SET COOKIE (KEY CHANGE)
   res.cookie("auth_token", token, {
     httpOnly: true,
-    secure: true,
-    sameSite: "none",
+    secure: false,
+    sameSite: "lax",
     maxAge: 24 * 60 * 60 * 1000,
   });
 
@@ -55,8 +56,8 @@ export async function login(req, res) {
 export function logout(req, res) {
   res.clearCookie("auth_token", {
     httpOnly: true,
-    sameSite: "none",
-    secure: true,
+    sameSite: "lax",
+    secure: false,
   });
 
   res.json({ success: true });
